@@ -198,4 +198,118 @@ router.patch(
     }
 );
 
+
+// Associar um usuário existente a uma instituição e definir seu perfil
+router.post(
+    '/:instituicaoId/associar',
+    autenticarToken,
+    autorizarPerfil('admin', 'coordenador'),
+    async (req, res) => {
+        try {
+            const instituicaoId = req.usuario.instituicaoId;
+            const usuarioId = Number(req.body?.usuario_id);
+            const perfil = req.body?.perfil;
+
+            const perfisPermitidos = [
+                'admin',
+                'coordenador',
+                'orientador',
+                'avaliador',
+                'aluno'
+            ];
+
+            if (
+                !Number.isInteger(usuarioId) ||
+                usuarioId <= 0
+            ) {
+                return res.status(400).json({
+                    erro: 'Informe um ID de usuário válido.'
+                });
+            }
+
+            if (!perfisPermitidos.includes(perfil)) {
+                return res.status(400).json({
+                    erro: 'Perfil inválido.'
+                });
+            }
+
+            // Coordenadores não podem criar outros administradores
+            // nem atribuir o perfil de coordenador.
+            if (
+                req.usuario.perfil === 'coordenador' &&
+                ['admin', 'coordenador'].includes(perfil)
+            ) {
+                return res.status(403).json({
+                    erro: 'Você não tem permissão para atribuir esse perfil.'
+                });
+            }
+
+            // Verificar se a conta existe
+            const usuario = await pool.query(
+                `SELECT id
+                 FROM usuarios
+                 WHERE id = $1`,
+                [usuarioId]
+            );
+
+            if (usuario.rows.length === 0) {
+                return res.status(404).json({
+                    erro: 'Usuário não encontrado.'
+                });
+            }
+
+            // Verificar se já existe um vínculo com essa instituição
+            const vinculoExistente = await pool.query(
+                `SELECT id, status
+                 FROM vinculos_institucionais
+                 WHERE usuario_id = $1
+                   AND instituicao_id = $2`,
+                [usuarioId, instituicaoId]
+            );
+
+            if (vinculoExistente.rows.length > 0) {
+                return res.status(409).json({
+                    erro: 'Este usuário já possui um vínculo com essa instituição.',
+                    vinculo: vinculoExistente.rows[0]
+                });
+            }
+
+            // Criar o vínculo já aprovado pelo administrador autorizado
+            const resultado = await pool.query(
+                `INSERT INTO vinculos_institucionais
+                    (usuario_id, instituicao_id, perfil, status)
+                 VALUES ($1, $2, $3, 'aprovado')
+                 RETURNING
+                    id,
+                    usuario_id,
+                    instituicao_id,
+                    perfil,
+                    status,
+                    criado_em`,
+                [usuarioId, instituicaoId, perfil]
+            );
+
+            return res.status(201).json({
+                mensagem: 'Usuário associado à instituição com sucesso.',
+                vinculo: resultado.rows[0]
+            });
+
+        } catch (erro) {
+            if (erro.code === '23505') {
+                return res.status(409).json({
+                    erro: 'Este usuário já possui um vínculo com essa instituição.'
+                });
+            }
+
+            console.error(
+                'Erro ao associar usuário à instituição:',
+                erro.message
+            );
+
+            return res.status(500).json({
+                erro: 'Erro interno ao associar usuário à instituição.'
+            });
+        }
+    }
+);
 module.exports = router;

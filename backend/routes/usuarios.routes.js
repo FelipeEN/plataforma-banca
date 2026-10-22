@@ -10,7 +10,7 @@ const autorizarPerfil = require('../middlewares/autorizarPerfil.middleware');
 const autorizarPerfilGlobal = require('../middlewares/autorizarPerfilGlobal.middleware');
 
 
-router.post('/', autorizarPerfilGlobal('admin', 'coordenador'),async (req, res) => {
+router.post('/',   autenticarToken,autorizarPerfilGlobal('admin', 'coordenador'),async (req, res) => {
     try {
         const { nome, email, senha } = req.body || {};
 
@@ -50,7 +50,7 @@ router.post('/', autorizarPerfilGlobal('admin', 'coordenador'),async (req, res) 
     }
 });
 
-router.get('/',    autorizarPerfilGlobal('admin', 'coordenador'), async (req, res) => {
+router.get('/',     autenticarToken,autorizarPerfilGlobal('admin', 'coordenador'), async (req, res) => {
     try {
         const resultado = await pool.query(
             `SELECT id, nome, email, criado_em

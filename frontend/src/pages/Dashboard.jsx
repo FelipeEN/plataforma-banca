@@ -250,6 +250,18 @@ setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
     ♙ Cadastrar usuário
   </a>
 )}
+
+{['admin', 'coordenador'].includes(perfilUsuario) && (
+  <a
+    href="/usuarios/associar"
+    onClick={(evento) => {
+      evento.preventDefault()
+      navigate('/usuarios/associar')
+    }}
+  >
+    ♙ Associar perfil
+  </a>
+)}
         </nav>
         <div className="perfil">
           <div className="avatar">FS</div>

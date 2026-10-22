@@ -1,6 +1,7 @@
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import './CriarUsuario.css'
 
 function CriarUsuario() {
   const navigate = useNavigate()
@@ -36,7 +37,7 @@ function CriarUsuario() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          Authorization: `Bearer ${sessionStorage.getItem('token')}`
         },
         body: JSON.stringify({
           nome,
@@ -58,7 +59,6 @@ function CriarUsuario() {
       setEmail('')
       setSenha('')
       setConfirmarSenha('')
-
     } catch (error) {
       setErro(
         error.message === 'Failed to fetch'
@@ -72,84 +72,158 @@ function CriarUsuario() {
 
   return (
     <main className="pagina-criar-usuario">
-      <section className="formulario-usuario">
-        <h1>Cadastrar usuário</h1>
+      <header className="cabecalho-cadastro">
+        <Link to="/dashboard" className="marca-cadastro">
+          <span className="marca-icone-cadastro">PA</span>
 
-        <p>
-          Preencha os dados para criar uma nova conta no EstudaNet.
-        </p>
+          <span className="marca-texto-cadastro">
+            <strong>Acadêmica</strong>
+            <small>Gestão de projetos</small>
+          </span>
+        </Link>
 
-        {mensagem && (
-          <div role="status" className="mensagem-sucesso">
-            {mensagem}
-          </div>
-        )}
+        <button
+          type="button"
+          className="botao-voltar-cadastro"
+          onClick={() => navigate('/dashboard')}
+        >
+          ← Voltar ao dashboard
+        </button>
+      </header>
 
-        {erro && (
-          <div role="alert" className="mensagem-erro">
-            {erro}
-          </div>
-        )}
+      <section className="conteudo-cadastro">
+        <div className="introducao-cadastro">
+          <span className="etiqueta-cadastro">
+            GESTÃO DE USUÁRIOS
+          </span>
 
-        <form onSubmit={cadastrarUsuario}>
-          <div>
-            <label htmlFor="nome">Nome completo</label>
-            <input
-              id="nome"
-              type="text"
-              value={nome}
-              onChange={(event) => setNome(event.target.value)}
-              required
-              autoComplete="name"
-            />
-          </div>
+          <h1>Cadastrar usuário</h1>
 
-          <div>
-            <label htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              autoComplete="email"
-            />
+          <p>
+            Crie uma nova conta para fazer parte da plataforma
+            de gestão acadêmica.
+          </p>
+        </div>
+
+        <section className="cartao-cadastro">
+          <div className="icone-cadastro">
+            ♙
           </div>
 
-          <div>
-            <label htmlFor="senha">Senha</label>
-            <input
-              id="senha"
-              type="password"
-              value={senha}
-              onChange={(event) => setSenha(event.target.value)}
-              minLength={8}
-              required
-              autoComplete="new-password"
-            />
+          <div className="titulo-formulario-cadastro">
+            <h2>Dados do usuário</h2>
+            <p>Preencha todos os campos abaixo.</p>
           </div>
 
-          <div>
-            <label htmlFor="confirmarSenha">Confirmar senha</label>
-            <input
-              id="confirmarSenha"
-              type="password"
-              value={confirmarSenha}
-              onChange={(event) =>
-                setConfirmarSenha(event.target.value)
-              }
-              minLength={8}
-              required
-              autoComplete="new-password"
-            />
-          </div>
+          {mensagem && (
+            <div
+              role="status"
+              className="mensagem-cadastro mensagem-sucesso-cadastro"
+            >
+              <span>✓</span>
+              <p>{mensagem}</p>
+            </div>
+          )}
 
-          <button type="submit" disabled={carregando}>
-            {carregando ? 'Cadastrando...' : 'Cadastrar usuário'}
-          </button>
-        </form>
+          {erro && (
+            <div
+              role="alert"
+              className="mensagem-cadastro mensagem-erro-cadastro"
+            >
+              <span>!</span>
+              <p>{erro}</p>
+            </div>
+          )}
 
-        <Link to="/dashboard">Voltar ao dashboard</Link>
+          <form onSubmit={cadastrarUsuario} className="formulario-cadastro">
+            <div className="campo-cadastro">
+              <label htmlFor="nome">Nome completo</label>
+              <input
+                id="nome"
+                type="text"
+                placeholder="Digite o nome completo"
+                value={nome}
+                onChange={(event) => setNome(event.target.value)}
+                required
+                autoComplete="name"
+              />
+            </div>
+
+            <div className="campo-cadastro">
+              <label htmlFor="email">E-mail</label>
+              <input
+                id="email"
+                type="email"
+                placeholder="usuario@exemplo.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="campo-cadastro">
+              <label htmlFor="senha">Senha</label>
+              <input
+                id="senha"
+                type="password"
+                placeholder="Mínimo de 8 caracteres"
+                value={senha}
+                onChange={(event) => setSenha(event.target.value)}
+                minLength={8}
+                required
+                autoComplete="new-password"
+              />
+              <small className="ajuda-campo">
+                Utilize pelo menos 8 caracteres.
+              </small>
+            </div>
+
+            <div className="campo-cadastro">
+              <label htmlFor="confirmarSenha">Confirmar senha</label>
+              <input
+                id="confirmarSenha"
+                type="password"
+                placeholder="Digite a senha novamente"
+                value={confirmarSenha}
+                onChange={(event) =>
+                  setConfirmarSenha(event.target.value)
+                }
+                minLength={8}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="botao-cadastrar-usuario"
+              disabled={carregando}
+            >
+              {carregando ? (
+                <>
+                  <span className="indicador-carregamento" />
+                  Cadastrando...
+                </>
+              ) : (
+                <>
+                  <span>+</span>
+                  Cadastrar usuário
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="rodape-formulario-cadastro">
+            Os dados serão enviados com segurança para a API
+            do EstudaNet.
+          </p>
+        </section>
+
+        <footer className="rodape-cadastro">
+          <span>EstudaNet</span>
+          <span>Gestão acadêmica</span>
+        </footer>
       </section>
     </main>
   )

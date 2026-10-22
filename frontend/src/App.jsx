@@ -8,7 +8,7 @@ import DetalhesBanca from './pages/DetalhesBanca.jsx'
 import AvaliarProjeto from './pages/AvaliarProjeto.jsx'
 import Ranking from './pages/Ranking.jsx'
 import Avaliacoes from './pages/Avaliacoes'
-
+import AssociarUsuario from './pages/AssociarUsuario.jsx'
 import ConsultaAvaliacoes from './pages/ConsultaAvaliacoes.jsx'
 import CriarUsuario from './pages/CriarUsuario.jsx'
 import ResultadoAluno from './pages/ResultadoAluno.jsx'
@@ -119,7 +119,14 @@ function App() {
       : <Navigate to="/login" replace />
   }
 />
-
+<Route
+  path="/usuarios/associar"
+  element={
+    <RotaProtegida>
+      <AssociarUsuario />
+    </RotaProtegida>
+  }
+/>
 
             <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
