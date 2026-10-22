@@ -187,8 +187,25 @@ setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
             ♧ Bancas
           </a>
 
-          <a href="#avaliacoes">☑ Avaliações</a>
-          <a href="#ranking">♜ Ranking</a>
+       <a
+  href="/avaliacoes"
+  onClick={(evento) => {
+    evento.preventDefault()
+    navigate('/avaliacoes')
+  }}
+>
+  ☑ Avaliações
+</a>
+
+<a
+  href="/bancas"
+  onClick={(evento) => {
+    evento.preventDefault()
+    navigate('/bancas')
+  }}
+>
+  ♜ Ranking
+</a>
         </nav>
         <div className="perfil">
           <div className="avatar">FS</div>
@@ -265,23 +282,33 @@ setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
             <p>Bancas organizadas</p>
           </article>
 
-          <article className="cartao">
-            <div className="cartao-topo">
-              <span>Avaliações</span>
-              <span className="icone verde">☑</span>
-            </div>
-        <strong>{totalAvaliacoes}</strong>
-            <p>Avaliações realizadas</p>
-          </article>
+            <article
+              className="cartao"
+              onClick={() => navigate('/bancas')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(evento) => {
+                if (evento.key === 'Enter' || evento.key === ' ') {
+                  evento.preventDefault()
+                  navigate('/bancas')
+                }
+              }}
+              title="Consultar bancas"
+            ></article>
 
-          <article className="cartao">
-            <div className="cartao-topo">
-              <span>Ranking</span>
-              <span className="icone laranja">♜</span>
-            </div>
-              <strong>{totalProjetosRanqueados}</strong>
-            <p>Projetos com ranking definido</p>
-          </article>
+          <article
+            className="cartao"
+            onClick={() => navigate('/bancas')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(evento) => {
+              if (evento.key === 'Enter' || evento.key === ' ') {
+                evento.preventDefault()
+                navigate('/bancas')
+              }
+            }}
+            title="Consultar ranking das bancas"
+          ></article>
         </section>
 
         <section className="painel-inferior">

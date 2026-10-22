@@ -6,6 +6,11 @@ import DetalhesProjeto from './pages/DetalhesProjeto.jsx'
 import Bancas from './pages/Bancas.jsx'
 import DetalhesBanca from './pages/DetalhesBanca.jsx'
 import AvaliarProjeto from './pages/AvaliarProjeto.jsx'
+import Ranking from './pages/Ranking.jsx'
+import Avaliacoes from './pages/Avaliacoes'
+
+
+
 
 
 function App() {
@@ -67,6 +72,26 @@ function App() {
                   : <Navigate to="/login" replace />
           }
       />
+
+
+            <Route
+        path="/bancas/:bancaId/ranking"
+        element={
+          sessionStorage.getItem('token')
+            ? <Ranking />
+            : <Navigate to="/login" replace />
+        }
+      />
+
+<Route
+  path="/avaliacoes"
+  element={
+    sessionStorage.getItem('token')
+      ? <Avaliacoes />
+      : <Navigate to="/login" replace />
+  }
+/>
+
             <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )

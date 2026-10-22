@@ -300,6 +300,19 @@ async function cadastrarBanca(evento) {
                                                     ? 'Consultar banca →'
                                                     : 'Gerenciar banca →'}
                                     </button>
+
+                                    {['admin', 'coordenador'].includes(perfilUsuario) &&
+                                            banca.status === 'publicada' && (
+                                                <button
+                                                   className="botao-ranking"
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(`/bancas/${banca.id}/ranking`)
+                                                }
+                                                >
+                                                Ver ranking →
+                                             </button>
+                                    )}
                                 {['admin', 'coordenador'].includes(perfilUsuario) &&
                                     banca.status === 'rascunho' && (
                                         <button
