@@ -1604,6 +1604,27 @@
     line-height: 1.6;
 }
 
+.botao-exportar-ranking {
+    padding: 11px 16px;
+    color: #fff;
+    background: #6d4aff;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.botao-exportar-ranking:hover:not(:disabled) {
+    background: #5635d4;
+}
+
+.botao-exportar-ranking:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .pagina-ranking .detalhes-card {
     background: #ffffff;
     border: 1px solid #e8e5ef;
