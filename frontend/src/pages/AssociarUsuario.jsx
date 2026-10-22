@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AssociarUsuario.css'
 import { buscarContextoInstituicao } from '../utils/instituicao'
@@ -12,10 +12,15 @@ function AssociarUsuario() {
   const [perfil, setPerfil] = useState('avaliador')
   const [perfilAtual, setPerfilAtual] = useState('')
   const [instituicaoId, setInstituicaoId] = useState(null)
+  const [idUsuarioAutenticado, setIdUsuarioAutenticado] = useState(null)
   const [mensagem, setMensagem] = useState('')
   const [erro, setErro] = useState('')
+  const [mensagemExclusao, setMensagemExclusao] = useState('')
+  const [erroExclusao, setErroExclusao] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [enviando, setEnviando] = useState(false)
+  const [usuariosExcluindo, setUsuariosExcluindo] = useState([])
+  const exclusoesEmAndamento = useRef(new Set())
 
 const [vinculos, setVinculos] = useState([])
 const [vinculoId, setVinculoId] = useState('')
@@ -33,7 +38,14 @@ const [modoEdicao, setModoEdicao] = useState(false)
 
         const contexto = await buscarContextoInstituicao(token)
         const vinculo = contexto.vinculo
+        const usuarioIdAutenticado = Number(contexto.usuario?.id)
         setInstituicaoId(contexto.instituicaoId)
+        if (
+          Number.isSafeInteger(usuarioIdAutenticado) &&
+          usuarioIdAutenticado > 0
+        ) {
+          setIdUsuarioAutenticado(usuarioIdAutenticado)
+        }
 
         if (
           !vinculo ||
@@ -89,6 +101,121 @@ setVinculos(dadosVinculos)
 
     buscarDados()
   }, [navigate])
+
+async function excluirUsuario(usuario) {
+  const usuarioIdParaExcluir = Number(usuario.id)
+
+  if (
+    !['admin', 'coordenador'].includes(perfilAtual) ||
+    !Number.isSafeInteger(usuarioIdParaExcluir) ||
+    usuarioIdParaExcluir <= 0 ||
+    idUsuarioAutenticado === null ||
+    usuarioIdParaExcluir === idUsuarioAutenticado ||
+    exclusoesEmAndamento.current.has(usuarioIdParaExcluir)
+  ) {
+    return
+  }
+
+  const confirmado = window.confirm(
+    `Tem certeza de que deseja excluir ${usuario.nome}? Esta exclusão é permanente e pode ser impedida se houver vínculos ou registros relacionados. Esses registros não serão apagados automaticamente.`
+  )
+
+  if (!confirmado) {
+    return
+  }
+
+  exclusoesEmAndamento.current.add(usuarioIdParaExcluir)
+  setUsuariosExcluindo((ids) => [...ids, usuarioIdParaExcluir])
+  setMensagemExclusao('')
+  setErroExclusao('')
+
+  try {
+    const token = sessionStorage.getItem('token')
+
+    if (!token) {
+      setErroExclusao('Sua sessão expirou. Entre novamente para continuar.')
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const resposta = await fetch(
+      `${API_URL}/usuarios/${usuarioIdParaExcluir}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: ['Bearer', token].join(' ')
+        }
+      }
+    )
+    const dados = await resposta.json()
+
+    if (!resposta.ok) {
+      if (resposta.status === 401) {
+        sessionStorage.removeItem('token')
+        navigate('/login', { replace: true })
+        return
+      }
+
+      if (resposta.status === 400) {
+        throw new Error(dados.erro || 'O ID do usuário é inválido.')
+      }
+
+      if (resposta.status === 403) {
+        throw new Error(
+          dados.erro || 'Você não tem permissão para excluir este usuário.'
+        )
+      }
+
+      if (resposta.status === 404) {
+        throw new Error(dados.erro || 'Usuário não encontrado.')
+      }
+
+      if (resposta.status === 409) {
+        throw new Error(
+          `${dados.erro || 'O usuário possui vínculos ou registros relacionados.'} Preserve esses registros ou resolva as relações antes de tentar excluir novamente.`
+        )
+      }
+
+      if (resposta.status === 500) {
+        throw new Error(
+          dados.erro || 'O servidor não conseguiu excluir o usuário.'
+        )
+      }
+
+      throw new Error(
+        dados.erro || 'Não foi possível excluir o usuário.'
+      )
+    }
+
+    setUsuarios((lista) =>
+      lista.filter((item) => Number(item.id) !== usuarioIdParaExcluir)
+    )
+
+    if (Number(usuarioId) === usuarioIdParaExcluir) {
+      setUsuarioId('')
+      setVinculoId('')
+      setModoEdicao(false)
+      setPerfil('avaliador')
+    }
+
+    setMensagemExclusao(
+      dados.mensagem || `Usuário ${usuario.nome} excluído com sucesso.`
+    )
+  } catch (error) {
+    setErroExclusao(
+      error instanceof TypeError
+        ? 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
+        : error instanceof Error
+          ? error.message
+          : 'Não foi possível excluir o usuário.'
+    )
+  } finally {
+    exclusoesEmAndamento.current.delete(usuarioIdParaExcluir)
+    setUsuariosExcluindo((ids) =>
+      ids.filter((id) => id !== usuarioIdParaExcluir)
+    )
+  }
+}
 
 async function associarUsuario(event) {
   event.preventDefault()
@@ -311,6 +438,73 @@ async function associarUsuario(event) {
             </form>
           )}
         </section>
+
+        {['admin', 'coordenador'].includes(perfilAtual) && (
+          <section className="cartao-gerenciar-usuarios">
+            <h2>Gerenciar usuários</h2>
+            <p>
+              Exclua contas somente quando não houver vínculos ou
+              registros relacionados.
+            </p>
+
+            {mensagemExclusao && (
+              <p className="aviso-associar sucesso" role="status">
+                {mensagemExclusao}
+              </p>
+            )}
+
+            {erroExclusao && (
+              <p className="aviso-associar falha" role="alert">
+                {erroExclusao}
+              </p>
+            )}
+
+            {carregando ? (
+              <p role="status">Carregando lista de usuários...</p>
+            ) : usuarios.length === 0 ? (
+              <p role="status">Não há usuários cadastrados.</p>
+            ) : (
+              <ul className="lista-gerenciar-usuarios">
+                {usuarios.map((usuario) => {
+                  const usuarioIdAtual = Number(usuario.id)
+                  const ehContaAtual =
+                    idUsuarioAutenticado !== null &&
+                    usuarioIdAtual === idUsuarioAutenticado
+                  const excluindo =
+                    usuariosExcluindo.includes(usuarioIdAtual)
+
+                  return (
+                    <li
+                      className="item-gerenciar-usuario"
+                      key={usuario.id}
+                    >
+                      <div className="dados-gerenciar-usuario">
+                        <strong>{usuario.nome}</strong>
+                        <span>{usuario.email}</span>
+                      </div>
+
+                      {ehContaAtual ? (
+                        <span className="identificacao-conta-atual">
+                          Conta atual
+                        </span>
+                      ) : idUsuarioAutenticado !== null ? (
+                        <button
+                          className="botao-excluir-usuario"
+                          type="button"
+                          aria-label={`Excluir usuário ${usuario.nome}`}
+                          onClick={() => excluirUsuario(usuario)}
+                          disabled={excluindo}
+                        >
+                          {excluindo ? 'Excluindo...' : 'Excluir'}
+                        </button>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+        )}
       </section>
     </main>
   )
