@@ -69,6 +69,64 @@ router.get('/',     autenticarToken,autorizarPerfilGlobal('admin', 'coordenador'
     }
 });
 
+router.delete(
+    '/:usuarioId',
+    autenticarToken,
+    autorizarPerfilGlobal('admin', 'coordenador'),
+    async (req, res) => {
+        const usuarioIdTexto = req.params.usuarioId;
+
+        if (!/^[0-9]+$/.test(usuarioIdTexto)) {
+            return res.status(400).json({
+                erro: 'ID do usuário inválido.'
+            });
+        }
+
+        const usuarioId = Number(usuarioIdTexto);
+
+        if (!Number.isSafeInteger(usuarioId) || usuarioId <= 0) {
+            return res.status(400).json({
+                erro: 'ID do usuário inválido.'
+            });
+        }
+
+        if (usuarioId === Number(req.usuario.id)) {
+            return res.status(403).json({
+                erro: 'Você não pode excluir sua própria conta.'
+            });
+        }
+
+        try {
+            const resultado = await pool.query(
+                'DELETE FROM usuarios WHERE id = $1',
+                [usuarioId]
+            );
+
+            if (resultado.rowCount === 0) {
+                return res.status(404).json({
+                    erro: 'Usuário não encontrado.'
+                });
+            }
+
+            return res.status(200).json({
+                mensagem: 'Usuário excluído com sucesso.'
+            });
+        } catch (erro) {
+            if (erro.code === '23503') {
+                return res.status(409).json({
+                    erro: 'Este usuário possui vínculos ou registros relacionados e não pode ser excluído.'
+                });
+            }
+
+            console.error('Erro ao excluir usuário:', erro.message);
+
+            return res.status(500).json({
+                erro: 'Erro interno ao excluir usuário.'
+            });
+        }
+    }
+);
+
 
 
 /* Listar orientadores com vínculo aprovado na instituição */
