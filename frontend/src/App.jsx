@@ -10,7 +10,7 @@ import Ranking from './pages/Ranking.jsx'
 import Avaliacoes from './pages/Avaliacoes'
 
 import ConsultaAvaliacoes from './pages/ConsultaAvaliacoes.jsx'
-
+import CriarUsuario from './pages/CriarUsuario.jsx'
 import ResultadoAluno from './pages/ResultadoAluno.jsx'
 
 function App() {
@@ -110,6 +110,16 @@ function App() {
                   : <Navigate to="/login" replace />
           }
       />
+
+<Route
+  path="/usuarios/novo"
+  element={
+    sessionStorage.getItem('token')
+      ? <CriarUsuario />
+      : <Navigate to="/login" replace />
+  }
+/>
+
 
             <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

@@ -7,8 +7,10 @@ const router = express.Router();
 const autenticarToken = require('../middlewares/auth.middleware');
 const autorizarPerfil = require('../middlewares/autorizarPerfil.middleware');
 
+const autorizarPerfilGlobal = require('../middlewares/autorizarPerfilGlobal.middleware');
 
-router.post('/', async (req, res) => {
+
+router.post('/', autorizarPerfilGlobal('admin', 'coordenador'),async (req, res) => {
     try {
         const { nome, email, senha } = req.body || {};
 
@@ -48,7 +50,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.get('/', async (req, res) => {
+router.get('/',    autorizarPerfilGlobal('admin', 'coordenador'), async (req, res) => {
     try {
         const resultado = await pool.query(
             `SELECT id, nome, email, criado_em

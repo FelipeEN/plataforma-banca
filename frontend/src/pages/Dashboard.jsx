@@ -238,6 +238,18 @@ setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
 >
   ♜ Ranking
 </a>
+
+{['admin', 'coordenador'].includes(perfilUsuario) && (
+  <a
+    href="/usuarios/novo"
+    onClick={(evento) => {
+      evento.preventDefault()
+      navigate('/usuarios/novo')
+    }}
+  >
+    ♙ Cadastrar usuário
+  </a>
+)}
         </nav>
         <div className="perfil">
           <div className="avatar">FS</div>
