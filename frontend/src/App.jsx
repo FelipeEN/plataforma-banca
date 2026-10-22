@@ -9,9 +9,9 @@ import AvaliarProjeto from './pages/AvaliarProjeto.jsx'
 import Ranking from './pages/Ranking.jsx'
 import Avaliacoes from './pages/Avaliacoes'
 
+import ConsultaAvaliacoes from './pages/ConsultaAvaliacoes.jsx'
 
-
-
+import ResultadoAluno from './pages/ResultadoAluno.jsx'
 
 function App() {
   return (
@@ -73,8 +73,17 @@ function App() {
           }
       />
 
+      <Route
+        path="/bancas/:bancaId/projetos/:projetoId/avaliacoes"
+        element={
+          sessionStorage.getItem('token')
+            ? <ConsultaAvaliacoes />
+            : <Navigate to="/login" replace />
+        }
+      />
 
-            <Route
+
+      <Route
         path="/bancas/:bancaId/ranking"
         element={
           sessionStorage.getItem('token')
@@ -83,14 +92,24 @@ function App() {
         }
       />
 
-<Route
-  path="/avaliacoes"
-  element={
-    sessionStorage.getItem('token')
-      ? <Avaliacoes />
-      : <Navigate to="/login" replace />
-  }
-/>
+      <Route
+        path="/avaliacoes"
+        element={
+          sessionStorage.getItem('token')
+            ? <Avaliacoes />
+            : <Navigate to="/login" replace />
+        }
+      />
+
+
+      <Route
+          path="/bancas/:bancaId/projetos/:projetoId/resultado"
+          element={
+              sessionStorage.getItem('token')
+                  ? <ResultadoAluno />
+                  : <Navigate to="/login" replace />
+          }
+      />
 
             <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

@@ -5,6 +5,60 @@ const autenticarToken = require('../middlewares/auth.middleware');
 const autorizarPerfil = require('../middlewares/autorizarPerfil.middleware');
 
 const router = express.Router();
+
+
+ // Listar projetos do aluno com suas respectivas bancas
+router.get(
+    '/:instituicaoId/meus-projetos',
+    autenticarToken,
+    autorizarPerfil('aluno'),
+    async (req, res) => {
+        try {
+            const instituicaoId = req.usuario.instituicaoId;
+            const alunoId = req.usuario.id;
+
+            const resultado = await pool.query(
+                `SELECT
+                    p.id AS projeto_id,
+                    p.titulo AS projeto_titulo,
+                    b.id AS banca_id,
+                    b.nome AS banca_nome,
+                    b.status AS banca_status
+                 FROM membros_projeto mp
+                 INNER JOIN projetos p
+                    ON p.id = mp.projeto_id
+                 INNER JOIN projetos_banca pb
+                    ON pb.projeto_id = p.id
+                 INNER JOIN bancas b
+                    ON b.id = pb.banca_id
+                 WHERE mp.usuario_id = $1
+                   AND mp.funcao = 'aluno'
+                   AND p.instituicao_id = $2
+                   AND b.instituicao_id = $2
+                 ORDER BY b.id DESC, p.titulo`,
+                [alunoId, instituicaoId]
+            );
+
+            return res.status(200).json({
+                total: resultado.rows.length,
+                projetos: resultado.rows
+            });
+
+        } catch (erro) {
+            console.error(
+                'Erro ao listar projetos do aluno:',
+                erro.message
+            );
+
+            return res.status(500).json({
+                erro: 'Erro interno ao listar projetos do aluno.'
+            });
+        }
+    }
+);
+
+
+
 // Listar projetos da instituição
 router.get(
     '/:instituicaoId',

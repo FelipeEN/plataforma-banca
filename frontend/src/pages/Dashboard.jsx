@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom'
 function Dashboard() {
 
 const navigate = useNavigate()
-
+const [meusProjetos, setMeusProjetos] = useState([])
+const [erroProjetosAluno, setErroProjetosAluno] = useState('')
 const [usuario, setUsuario] = useState(null)
 const [carregando, setCarregando] = useState(true)
 
@@ -50,6 +51,35 @@ useEffect(() => {
 
             const dados = await resposta.json()
             setUsuario(dados.usuario)
+
+            if (
+    dados.usuario?.vinculos?.some(
+        (vinculo) =>
+            vinculo.instituicao_id === 1 &&
+            vinculo.status === 'aprovado' &&
+            vinculo.perfil === 'aluno'
+    )
+) {
+    const respostaMeusProjetos = await fetch(
+        'http://localhost:3000/projetos/1/meus-projetos',
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }
+    )
+
+    const dadosMeusProjetos = await respostaMeusProjetos.json()
+
+    if (!respostaMeusProjetos.ok) {
+        throw new Error(
+            dadosMeusProjetos.erro ||
+            'Não foi possível buscar seus projetos.'
+        )
+    }
+
+    setMeusProjetos(dadosMeusProjetos.projetos ?? [])
+}
 
             console.log('Dados do usuário:', dados.usuario)
 
@@ -135,6 +165,8 @@ setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
             
         } catch (erro) {
             console.error('Erro ao buscar usuário:', erro)
+
+            setErroProjetosAluno(erro.message)
         } finally {
             setCarregando(false)
         }
@@ -282,46 +314,117 @@ setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
             <p>Bancas organizadas</p>
           </article>
 
-            <article
-              className="cartao"
-              onClick={() => navigate('/bancas')}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(evento) => {
-                if (evento.key === 'Enter' || evento.key === ' ') {
-                  evento.preventDefault()
-                  navigate('/bancas')
-                }
-              }}
-              title="Consultar bancas"
-            ></article>
 
-          <article
-            className="cartao"
-            onClick={() => navigate('/bancas')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(evento) => {
-              if (evento.key === 'Enter' || evento.key === ' ') {
-                evento.preventDefault()
-                navigate('/bancas')
-              }
-            }}
-            title="Consultar ranking das bancas"
-          ></article>
+
+<article
+    className="cartao"
+    onClick={() => navigate('/bancas')}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(evento) => {
+        if (evento.key === 'Enter' || evento.key === ' ') {
+            evento.preventDefault()
+            navigate('/bancas')
+        }
+    }}
+    title="Consultar bancas"
+>
+    <div className="cartao-topo">
+        <span>Consultar bancas</span>
+        <span className="icone azul">♧</span>
+    </div>
+
+    <strong>{totalBancas}</strong>
+    <p>Bancas cadastradas na plataforma</p>
+</article>
+
+<article
+    className="cartao"
+    onClick={() => navigate('/bancas')}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(evento) => {
+        if (evento.key === 'Enter' || evento.key === ' ') {
+            evento.preventDefault()
+            navigate('/bancas')
+        }
+    }}
+    title="Consultar ranking das bancas"
+>
+    <div className="cartao-topo">
+        <span>Ranking</span>
+        <span className="icone roxo">♜</span>
+    </div>
+
+    <strong>{totalProjetosRanqueados}</strong>
+    <p>Projetos no ranking</p>
+</article>
+
+
         </section>
 
-        <section className="painel-inferior">
-          <div>
-            <h3>Seu espaço de trabalho</h3>
+      
+<section className="painel-inferior">
+  <div>
+    <h3>Seu espaço de trabalho</h3>
+
+    <p>
+      Aqui vamos apresentar os projetos recentes e as
+      próximas avaliações conforme integrarmos a API.
+    </p>
+
+{perfilUsuario === 'aluno' && (
+    <div>
+        <h3>Meus resultados</h3>
+
+        {erroProjetosAluno && (
+            <p role="alert">{erroProjetosAluno}</p>
+        )}
+
+        {!erroProjetosAluno && meusProjetos.length === 0 && (
             <p>
-              Aqui vamos apresentar os projetos recentes e as
-              próximas avaliações conforme integrarmos a API.
+                Nenhum projeto associado a uma banca foi encontrado.
             </p>
-          </div>
+        )}
 
-          <span className="etiqueta">EM DESENVOLVIMENTO</span>
-        </section>
+        {meusProjetos.map((projeto) => (
+            <article
+                className="cartao"
+                key={`${projeto.banca_id}-${projeto.projeto_id}`}
+            >
+                <h4>{projeto.projeto_titulo}</h4>
+
+                <p>
+                    <strong>Banca:</strong> {projeto.banca_nome}
+                </p>
+
+                <p>
+                    <strong>Status:</strong> {projeto.banca_status}
+                </p>
+
+                {projeto.banca_status === 'publicada' ? (
+                    <button
+                        className="botao-voltar"
+                        onClick={() =>
+                            navigate(
+                                `/bancas/${projeto.banca_id}/projetos/${projeto.projeto_id}/resultado`
+                            )
+                        }
+                    >
+                        Consultar resultado
+                    </button>
+                ) : (
+                    <p>O resultado ainda não foi publicado.</p>
+                )}
+            </article>
+        ))}
+    </div>
+)}
+  </div>
+
+  <span className="etiqueta">EM DESENVOLVIMENTO</span>
+</section>
+
       </main>
     </div>
   )

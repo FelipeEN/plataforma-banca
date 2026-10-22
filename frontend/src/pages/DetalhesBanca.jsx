@@ -657,6 +657,18 @@ setProjetosDisponiveis(
                         >
                             Avaliar projeto →
                         </button>
+
+                        <button
+                                className="botao-detalhes-projeto"
+                                type="button"
+                                onClick={() =>
+                                    navigate(
+                                        `/bancas/${bancaId}/projetos/${projeto.id}/avaliacoes`
+                                    )
+                                }
+                            >
+                                Ver avaliações →
+                        </button>
                     </article>
                 ))}
             </div>

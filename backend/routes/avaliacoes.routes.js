@@ -359,13 +359,21 @@ router.get(
 
 
            // Adicionar a posição de cada projeto
-           const ranking = resultado.rows.map((projeto, indice) => ({
-               posicao: indice + 1,
-               projeto_id: projeto.projeto_id,
-               titulo: projeto.titulo,
-               total_avaliacoes: projeto.total_avaliacoes,
-               media_final: Number(projeto.media_final)
-           }));
+const ranking = resultado.rows.map((projeto, indice, projetos) => {
+    const posicao = indice > 0 &&
+        Number(projeto.media_final) ===
+        Number(projetos[indice - 1].media_final)
+            ? projetos[indice - 1].posicao
+            : indice + 1;
+
+    return {
+        posicao,
+        projeto_id: projeto.projeto_id,
+        titulo: projeto.titulo,
+        total_avaliacoes: projeto.total_avaliacoes,
+        media_final: Number(projeto.media_final)
+    };
+});
 
            return res.status(200).json({
                banca: banca.rows[0],

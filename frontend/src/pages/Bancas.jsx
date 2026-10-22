@@ -156,6 +156,51 @@ async function encerrarBanca(bancaId) {
 }
 
 
+async function publicarBanca(bancaId) {
+    const confirmar = window.confirm(
+        'Deseja publicar os resultados desta banca?'
+    )
+
+    if (!confirmar) return
+
+    try {
+        setErro('')
+
+        const token = sessionStorage.getItem('token')
+
+        const resposta = await fetch(
+            `http://localhost:3000/bancas/1/${bancaId}/publicar`,
+            {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        )
+
+        const dados = await resposta.json()
+
+        if (!resposta.ok) {
+            throw new Error(
+                dados.erro || 'Não foi possível publicar os resultados.'
+            )
+        }
+
+        setBancas((bancasAtuais) =>
+            bancasAtuais.map((banca) =>
+                banca.id === bancaId
+                    ? { ...banca, status: dados.banca.status }
+                    : banca
+            )
+        )
+
+        window.alert('Resultados publicados com sucesso!')
+    } catch (erro) {
+        window.alert(erro.message)
+    }
+}
+
+
 async function cadastrarBanca(evento) {
     evento.preventDefault()
 
@@ -337,6 +382,17 @@ async function cadastrarBanca(evento) {
                                                 : 'Encerrar banca'}
                                         </button>
                                     )}
+                                    
+                                    {['admin', 'coordenador'].includes(perfilUsuario) &&
+                                        banca.status === 'encerrada' && (
+                                            <button
+                                                    className="botao-publicar-banca"
+                                                type="button"
+                                                onClick={() => publicarBanca(banca.id)}
+                                            >
+                                                Publicar resultados
+                                            </button>
+                                        )}
 
                             </article>
                         ))}
