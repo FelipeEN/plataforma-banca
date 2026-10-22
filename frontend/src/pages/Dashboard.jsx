@@ -4,6 +4,7 @@ import '../App.css'
 import { useEffect, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 
 
 function Dashboard() {
@@ -12,17 +13,14 @@ const navigate = useNavigate()
 const [meusProjetos, setMeusProjetos] = useState([])
 const [erroProjetosAluno, setErroProjetosAluno] = useState('')
 const [usuario, setUsuario] = useState(null)
+const [instituicaoId, setInstituicaoId] = useState(null)
 const [carregando, setCarregando] = useState(true)
 
 const perfilUsuario = usuario?.vinculos?.find(
-    (vinculo) => vinculo.status === 'aprovado'
-)?.perfil
-
-const instituicaoId = usuario?.vinculos?.find(
     (vinculo) =>
-        vinculo.status === 'aprovado' &&
-        vinculo.perfil === perfilUsuario
-)?.instituicao_id
+        Number(vinculo.instituicao_id) === instituicaoId &&
+        vinculo.status === 'aprovado'
+)?.perfil
 
 const [totalProjetos, setTotalProjetos] = useState(0)
 const [totalBancas, setTotalBancas] = useState(0)
@@ -36,36 +34,15 @@ useEffect(() => {
           
             const token = sessionStorage.getItem('token')
 
-            const resposta = await fetch('http://localhost:3000/auth/me', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            })
+            const contexto = await buscarContextoInstituicao(token)
+            const usuarioLogado = contexto.usuario
+            const instituicaoId = contexto.instituicaoId
+            const perfilAtivo = contexto.vinculo.perfil
 
-            if (resposta.status === 401) {
-                sessionStorage.removeItem('token')
-                navigate('/login', { replace: true })
-                return
-            }
+            setUsuario(usuarioLogado)
+            setInstituicaoId(instituicaoId)
 
-            if (!resposta.ok) {
-                throw new Error('Não foi possível buscar o usuário.')
-            }
-
-            const dados = await resposta.json()
-        
-              const vinculoAtivo = dados.usuario?.vinculos?.find(
-                  (vinculo) => vinculo.status === 'aprovado'
-              )
-
-              if (!vinculoAtivo) {
-                  throw new Error('Você não possui vínculo aprovado com uma instituição.')
-              }
-
-              const instituicaoId = vinculoAtivo.instituicao_id
-
-              setUsuario(dados.usuario)
-if (vinculoAtivo.perfil === 'aluno') {
+if (perfilAtivo === 'aluno') {
     const respostaMeusProjetos = await fetch(
         `http://localhost:3000/projetos/${instituicaoId}/meus-projetos`,
         {
@@ -87,7 +64,7 @@ if (vinculoAtivo.perfil === 'aluno') {
     setMeusProjetos(dadosMeusProjetos.projetos ?? [])
 }
 
-            console.log('Dados do usuário:', dados.usuario)
+            console.log('Dados do usuário:', usuarioLogado)
 
             const respostaProjetos = await fetch(
                  `http://localhost:3000/projetos/${instituicaoId}`,

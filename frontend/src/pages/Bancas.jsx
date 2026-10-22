@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 
 function Bancas() {
     const navigate = useNavigate()
@@ -10,10 +11,11 @@ function Bancas() {
     const [erro, setErro] = useState('')
 
 const [usuario, setUsuario] = useState(null)
+const [instituicaoId, setInstituicaoId] = useState(null)
 
 const perfilUsuario = usuario?.vinculos?.find(
     (vinculo) =>
-        vinculo.instituicao_id === 1 &&
+        Number(vinculo.instituicao_id) === instituicaoId &&
         vinculo.status === 'aprovado'
 )?.perfil
 
@@ -32,41 +34,10 @@ useEffect(() => {
                 return
             }
 
-            // 1. Busca os dados do usuário autenticado
-            const respostaUsuario = await fetch(
-                'http://localhost:3000/auth/me',
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            )
-
-            const dadosUsuario = await respostaUsuario.json()
-
-            if (!respostaUsuario.ok) {
-                throw new Error(
-                    dadosUsuario.erro ||
-                    'Não foi possível carregar o usuário.'
-                )
-            }
-
-            const usuarioLogado = dadosUsuario.usuario
+            const contexto = await buscarContextoInstituicao(token)
+            const usuarioLogado = contexto.usuario
             setUsuario(usuarioLogado)
-
-            // 2. Encontra uma instituição com vínculo aprovado
-            const vinculoAtivo = usuarioLogado?.vinculos?.find(
-                (vinculo) => vinculo.status === 'aprovado'
-            )
-
-            if (!vinculoAtivo) {
-                throw new Error(
-                    'Você não possui vínculo aprovado com uma instituição.'
-                )
-            }
-
-            const idInstituicao = Number(vinculoAtivo.instituicao_id)
-
+            const idInstituicao = contexto.instituicaoId
             setInstituicaoId(idInstituicao)
 
             // 3. Busca as bancas da instituição correta
@@ -101,6 +72,9 @@ useEffect(() => {
     async function abrirBanca(bancaId) {
     try {
         const token = sessionStorage.getItem('token')
+        if (!instituicaoId) {
+            throw new Error('Não foi possível identificar a instituição ativa.')
+        }
 
         const resposta = await fetch(
     `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/abrir`,
@@ -144,9 +118,12 @@ async function encerrarBanca(bancaId) {
         setEncerrandoBancaId(bancaId)
 
         const token = sessionStorage.getItem('token')
+        if (!instituicaoId) {
+            throw new Error('Não foi possível identificar a instituição ativa.')
+        }
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/1/${bancaId}/encerrar`,
+            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/encerrar`,
             {
                 method: 'PATCH',
                 headers: {
@@ -191,9 +168,12 @@ async function publicarBanca(bancaId) {
         setErro('')
 
         const token = sessionStorage.getItem('token')
+        if (!instituicaoId) {
+            throw new Error('Não foi possível identificar a instituição ativa.')
+        }
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/1/${bancaId}/publicar`,
+            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/publicar`,
             {
                 method: 'PATCH',
                 headers: {
@@ -233,9 +213,12 @@ async function cadastrarBanca(evento) {
         setErro('')
 
         const token = sessionStorage.getItem('token')
+        if (!instituicaoId) {
+            throw new Error('Não foi possível identificar a instituição ativa.')
+        }
 
         const resposta = await fetch(
-            'http://localhost:3000/bancas/1',
+            `http://localhost:3000/bancas/${instituicaoId}`,
             {
                 method: 'POST',
                 headers: {

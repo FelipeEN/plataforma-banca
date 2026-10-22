@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../App.css'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 
 function Projetos() {
   const navigate = useNavigate()
@@ -14,9 +15,10 @@ function Projetos() {
     async function buscarProjetos() {
       try {
         const token = sessionStorage.getItem('token')
+        const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-          'http://localhost:3000/projetos/1',
+          `http://localhost:3000/projetos/${instituicaoId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`

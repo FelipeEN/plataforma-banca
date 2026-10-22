@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AssociarUsuario.css'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 
 const API = 'http://localhost:3000'
-const INSTITUICAO_ID = 1
 
 function AssociarUsuario() {
   const navigate = useNavigate()
@@ -12,6 +12,7 @@ function AssociarUsuario() {
   const [usuarioId, setUsuarioId] = useState('')
   const [perfil, setPerfil] = useState('avaliador')
   const [perfilAtual, setPerfilAtual] = useState('')
+  const [instituicaoId, setInstituicaoId] = useState(null)
   const [mensagem, setMensagem] = useState('')
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(true)
@@ -31,27 +32,9 @@ const [modoEdicao, setModoEdicao] = useState(false)
           return
         }
 
-        const respostaUsuario = await fetch(`${API}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        const dadosUsuario = await respostaUsuario.json()
-
-        if (!respostaUsuario.ok) {
-          throw new Error(
-            dadosUsuario.erro || 'Não foi possível validar o usuário.'
-          )
-        }
-
-        const usuarioLogado = dadosUsuario.usuario
-
-        const vinculo = usuarioLogado?.vinculos?.find(
-          (item) =>
-            Number(item.instituicao_id) === INSTITUICAO_ID &&
-            item.status === 'aprovado'
-        )
+        const contexto = await buscarContextoInstituicao(token)
+        const vinculo = contexto.vinculo
+        setInstituicaoId(contexto.instituicaoId)
 
         if (
           !vinculo ||
@@ -79,7 +62,7 @@ const [modoEdicao, setModoEdicao] = useState(false)
 
         setUsuarios(dadosUsuarios)
 
-        const respostaVinculos = await fetch(`${API}/vinculos/${INSTITUICAO_ID}`, {
+        const respostaVinculos = await fetch(`${API}/vinculos/${contexto.instituicaoId}`, {
   headers: {
     Authorization: `Bearer ${token}`
   }
@@ -126,8 +109,8 @@ async function associarUsuario(event) {
     // Se já existe vínculo, atualiza o perfil.
     // Caso contrário, cria uma nova associação.
     const url = modoEdicao
-      ? `${API}/vinculos/${INSTITUICAO_ID}/${vinculoId}/perfil`
-      : `${API}/vinculos/${INSTITUICAO_ID}/associar`
+        ? `${API}/vinculos/${instituicaoId}/${vinculoId}/perfil`
+        : `${API}/vinculos/${instituicaoId}/associar`
 
     const metodo = modoEdicao ? 'PATCH' : 'POST'
 

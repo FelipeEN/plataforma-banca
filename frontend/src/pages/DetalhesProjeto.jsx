@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import '../App.css'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 
 function DetalhesProjeto() {
     const { projetoId } = useParams()
@@ -21,6 +22,7 @@ function DetalhesProjeto() {
     const [orientadores, setOrientadores] = useState([])
     const [orientadorSelecionado, setOrientadorSelecionado] = useState('')
     const [perfil, setPerfil] = useState('')
+    const [instituicaoId, setInstituicaoId] = useState(null)
     const [carregandoOrientadores, setCarregandoOrientadores] = useState(false)
     const [associando, setAssociando] = useState(false)
     const [mensagem, setMensagem] = useState('')
@@ -51,33 +53,9 @@ function DetalhesProjeto() {
         const token = sessionStorage.getItem('token')
 
         try {
-            const resposta = await fetch(
-                'http://localhost:3000/auth/me',
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            )
-
-            if (resposta.status === 401) {
-                sessionStorage.removeItem('token')
-                navigate('/login')
-                return
-            }
-
-            const dados = await resposta.json()
-
-            if (!resposta.ok) {
-                throw new Error('Não foi possível identificar o perfil.')
-            }
-
-            const vinculo = (dados.usuario.vinculos || []).find(
-                (v) => Number(v.instituicao_id) === 1 &&
-                    v.status === 'aprovado'
-            )
-
-            setPerfil(vinculo?.perfil || '')
+            const contexto = await buscarContextoInstituicao(token)
+            setInstituicaoId(contexto.instituicaoId)
+            setPerfil(contexto.vinculo.perfil)
         } catch (erro) {
             console.error('Erro ao buscar perfil:', erro.message)
             setPerfil('')
@@ -88,7 +66,10 @@ function DetalhesProjeto() {
 }, [navigate])
 
 useEffect(() => {
-    if (perfil !== 'admin' && perfil !== 'coordenador') {
+    if (
+        !instituicaoId ||
+        (perfil !== 'admin' && perfil !== 'coordenador')
+    ) {
         return
     }
 
@@ -100,7 +81,7 @@ useEffect(() => {
 
         try {
             const resposta = await fetch(
-                'http://localhost:3000/usuarios/orientadores/1',
+                `http://localhost:3000/usuarios/orientadores/${instituicaoId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -131,10 +112,13 @@ useEffect(() => {
     }
 
         buscarOrientadores()
-    }, [perfil, navigate])
+    }, [perfil, instituicaoId, navigate])
 
     useEffect(() => {
-    if (perfil !== 'admin' && perfil !== 'coordenador') {
+    if (
+        !instituicaoId ||
+        (perfil !== 'admin' && perfil !== 'coordenador')
+    ) {
         return
     }
 
@@ -145,7 +129,7 @@ useEffect(() => {
             const token = sessionStorage.getItem('token')
 
             const resposta = await fetch(
-                'http://localhost:3000/usuarios/alunos/1',
+                `http://localhost:3000/usuarios/alunos/${instituicaoId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -167,7 +151,7 @@ useEffect(() => {
     }
 
     buscarAlunos()
-}, [perfil])
+}, [perfil, instituicaoId])
 
 
     useEffect(() => {
@@ -175,8 +159,10 @@ useEffect(() => {
             const token = sessionStorage.getItem('token')
 
             try {
+                const contexto = await buscarContextoInstituicao(token)
+                const instituicaoId = contexto.instituicaoId
                 const resposta = await fetch(
-                    `http://localhost:3000/projetos/1/${projetoId}`,
+                    `http://localhost:3000/projetos/${instituicaoId}/${projetoId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -214,8 +200,10 @@ useEffect(() => {
             const token = sessionStorage.getItem('token')
 
             try {
+                const contexto = await buscarContextoInstituicao(token)
+                const instituicaoId = contexto.instituicaoId
                 const resposta = await fetch(
-                    `http://localhost:3000/projetos/1/${projetoId}/membros`,
+                    `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -264,7 +252,7 @@ useEffect(() => {
 
     try {
         const resposta = await fetch(
-            `http://localhost:3000/projetos/1/${projetoId}/orientadores`,
+            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/orientadores`,
             {
                 method: 'POST',
                 headers: {
@@ -298,7 +286,7 @@ useEffect(() => {
 
         // Atualiza a lista de integrantes do projeto.
         const respostaMembros = await fetch(
-            `http://localhost:3000/projetos/1/${projetoId}/membros`,
+            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -336,7 +324,7 @@ async function associarAluno() {
 
     try {
         const resposta = await fetch(
-            `http://localhost:3000/projetos/1/${projetoId}/alunos`,
+            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/alunos`,
             {
                 method: 'POST',
                 headers: {
@@ -368,7 +356,7 @@ async function associarAluno() {
         setAlunoSelecionado('')
 
         const respostaMembros = await fetch(
-            `http://localhost:3000/projetos/1/${projetoId}/membros`,
+            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -410,7 +398,7 @@ async function removerIntegrante(usuarioId) {
         const token = sessionStorage.getItem('token')
 
         const resposta = await fetch(
-            `http://localhost:3000/projetos/1/${projetoId}/membros/${usuarioId}`,
+            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros/${usuarioId}`,
             {
                 method: 'DELETE',
                 headers: {
@@ -452,7 +440,7 @@ async function salvarEdicao() {
 
     try {
         const resposta = await fetch(
-            `http://localhost:3000/projetos/1/${projetoId}`,
+            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}`,
             {
                 method: 'PUT',
                 headers: {

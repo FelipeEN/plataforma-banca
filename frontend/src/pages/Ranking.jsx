@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 
 function Ranking() {
     const { bancaId } = useParams()
@@ -15,9 +16,10 @@ function Ranking() {
         async function buscarRanking() {
             try {
                 const token = sessionStorage.getItem('token')
+                const { instituicaoId } = await buscarContextoInstituicao(token)
 
                 const resposta = await fetch(
-                    `http://localhost:3000/avaliacoes/1/${bancaId}/ranking`,
+                    `http://localhost:3000/avaliacoes/${instituicaoId}/${bancaId}/ranking`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`

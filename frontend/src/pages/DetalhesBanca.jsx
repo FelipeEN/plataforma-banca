@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 
 function DetalhesBanca() {
     const { bancaId } = useParams()
@@ -46,9 +47,10 @@ function DetalhesBanca() {
         setAssociandoProjeto(true)
 
         const token = sessionStorage.getItem('token')
+        const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/1/${bancaId}/projetos`,
+            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/projetos`,
             {
                 method: 'POST',
                 headers: {
@@ -89,9 +91,10 @@ function DetalhesBanca() {
         setAssociandoAvaliador(true)
 
         const token = sessionStorage.getItem('token')
+        const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/1/${bancaId}/avaliadores`,
+            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/avaliadores`,
             {
                 method: 'POST',
                 headers: {
@@ -134,9 +137,10 @@ function DetalhesBanca() {
         setSalvandoCriterio(true)
 
         const token = sessionStorage.getItem('token')
+        const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/1/${bancaId}/criterios`,
+            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/criterios`,
             {
                 method: 'POST',
                 headers: {
@@ -166,7 +170,7 @@ function DetalhesBanca() {
         setNotaMaximaCriterio('10')
 
         const respostaCriterios = await fetch(
-            `http://localhost:3000/bancas/1/${bancaId}/criterios`,
+            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/criterios`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -193,45 +197,8 @@ useEffect(() => {
     async function buscarPerfilUsuario() {
         try {
             const token = sessionStorage.getItem('token')
-
-            const resposta = await fetch(
-                'http://localhost:3000/auth/me',
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            )
-
-            const dados = await resposta.json()
-console.log('Status HTTP:', resposta.status)
-console.log('Resposta completa de /auth/me:', dados)
-console.log('Tipo da resposta:', typeof dados)
-console.log('É um array?', Array.isArray(dados))
-            if (!resposta.ok) {
-                throw new Error(
-                    'Não foi possível identificar o usuário.'
-                )
-            }
-
-            const usuario = dados.usuario ?? dados;
-            const vinculos = Array.isArray(usuario.vinculos)
-                ? usuario.vinculos
-                : [];
-
-            console.log('Vínculos recebidos:', vinculos);
-
-            const vinculo = vinculos.find(
-                (item) =>
-                    Number(item.instituicao_id) === 1 &&
-                    item.status === 'aprovado'
-            );
-
-            console.log('Vínculo selecionado:', vinculo);
-
-            const perfil = vinculo?.perfil || '';
-
-            setPerfilUsuario(perfil);
+            const contexto = await buscarContextoInstituicao(token)
+            setPerfilUsuario(contexto.vinculo.perfil)
 
         } catch (erro) {
             console.error('Erro ao buscar perfil:', erro.message)
@@ -253,9 +220,10 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
         async function buscarProjetos() {
             try {
                 const token = sessionStorage.getItem('token')
+                const { instituicaoId } = await buscarContextoInstituicao(token)
 
                 const resposta = await fetch(
-                    `http://localhost:3000/bancas/1/${bancaId}/projetos`,
+                    `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/projetos`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -275,7 +243,7 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
                 setProjetos(dados.projetos)
 
                 const respostaCriterios = await fetch(
-                        `http://localhost:3000/bancas/1/${bancaId}/criterios`,
+                        `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/criterios`,
                         {
                             headers: {
                                 Authorization: `Bearer ${token}`
@@ -293,7 +261,7 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
                         setCriterios(dadosCriterios.criterios || [])
                     }
                     const respostaAvaliadores = await fetch(
-                        `http://localhost:3000/bancas/1/${bancaId}/avaliadores`,
+                        `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/avaliadores`,
                         {
                             headers: {
                                 Authorization: `Bearer ${token}`
@@ -313,7 +281,7 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
 
 
                     const respostaDisponiveis = await fetch(
-    'http://localhost:3000/usuarios/avaliadores/1',
+    `http://localhost:3000/usuarios/avaliadores/${instituicaoId}`,
     {
         headers: {
             Authorization: `Bearer ${token}`
@@ -332,7 +300,7 @@ if (!respostaDisponiveis.ok) {
     setAvaliadoresDisponiveis(dadosDisponiveis)
 }
              const respostaProjetos = await fetch(
-    'http://localhost:3000/projetos/1',
+    `http://localhost:3000/projetos/${instituicaoId}`,
     {
         headers: {
             Authorization: `Bearer ${token}`

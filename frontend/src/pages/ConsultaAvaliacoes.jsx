@@ -2,6 +2,7 @@ import './ConsultaAvaliacoes.css'
 
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { buscarContextoInstituicao } from '../utils/instituicao'
 function ConsultaAvaliacoes() {
     const { bancaId, projetoId } = useParams()
     const navigate = useNavigate()
@@ -14,9 +15,10 @@ function ConsultaAvaliacoes() {
         async function buscarAvaliacoes() {
             try {
                 const token = sessionStorage.getItem('token')
+                const { instituicaoId } = await buscarContextoInstituicao(token)
 
                 const resposta = await fetch(
-                    `http://localhost:3000/avaliacoes/1/${bancaId}/${projetoId}`,
+                    `http://localhost:3000/avaliacoes/${instituicaoId}/${bancaId}/${projetoId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
