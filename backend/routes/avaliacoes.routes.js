@@ -807,5 +807,185 @@ router.patch(
 
 
 
+/* Consultar o resultado publicado do próprio projeto */
+router.get(
+    '/:instituicaoId/:bancaId/:projetoId/resultado-aluno',
+    autenticarToken,
+    autorizarPerfil('aluno'),
+    async (req, res) => {
+        try {
+            const instituicaoId = req.usuario.instituicaoId;
+            const alunoId = req.usuario.id;
+            const bancaId = Number(req.params.bancaId);
+            const projetoId = Number(req.params.projetoId);
+
+            if (
+                !Number.isInteger(bancaId) ||
+                bancaId <= 0 ||
+                !Number.isInteger(projetoId) ||
+                projetoId <= 0
+            ) {
+                return res.status(400).json({
+                    erro: 'ID da banca ou do projeto inválido.'
+                });
+            }
+
+            // Verificar se a banca está publicada
+            const banca = await pool.query(
+                `SELECT id, nome, status
+                 FROM bancas
+                 WHERE id = $1
+                   AND instituicao_id = $2
+                   AND status = 'publicada'`,
+                [bancaId, instituicaoId]
+            );
+
+            if (banca.rows.length === 0) {
+                return res.status(404).json({
+                    erro: 'Banca publicada não encontrada.'
+                });
+            }
+
+            // Verificar se o aluno faz parte da equipe
+            // e se o projeto está associado à banca.
+            const projeto = await pool.query(
+                `SELECT p.id, p.titulo
+                 FROM projetos p
+                 INNER JOIN projetos_banca pb
+                    ON pb.projeto_id = p.id
+                 INNER JOIN membros_projeto mp
+                    ON mp.projeto_id = p.id
+                 WHERE p.id = $1
+                   AND p.instituicao_id = $2
+                   AND pb.banca_id = $3
+                   AND mp.usuario_id = $4
+                   AND mp.funcao = 'aluno'`,
+                [projetoId, instituicaoId, bancaId, alunoId]
+            );
+
+            if (projeto.rows.length === 0) {
+                return res.status(403).json({
+                    erro: 'Você não tem acesso aos resultados deste projeto.'
+                });
+            }
+
+            // Calcular a nota ponderada de cada avaliação finalizada.
+            const resultado = await pool.query(
+                `WITH notas_por_avaliacao AS (
+                    SELECT
+                        a.id AS avaliacao_id,
+                        a.projeto_id,
+                        a.avaliador_id,
+                        SUM(na.nota * ca.peso)
+                            / NULLIF(SUM(ca.peso), 0) AS nota_final
+                    FROM avaliacoes a
+                    INNER JOIN notas_avaliacao na
+                        ON na.avaliacao_id = a.id
+                    INNER JOIN criterios_avaliacao ca
+                        ON ca.id = na.criterio_id
+                       AND ca.banca_id = a.banca_id
+                    WHERE a.banca_id = $1
+                      AND a.status = 'finalizada'
+                    GROUP BY
+                        a.id,
+                        a.projeto_id,
+                        a.avaliador_id
+                ),
+                avaliadores_esperados AS (
+                    SELECT
+                        pb.projeto_id,
+                        COUNT(DISTINCT ab.usuario_id)::int
+                            AS total_esperado
+                    FROM projetos_banca pb
+                    LEFT JOIN avaliadores_banca ab
+                        ON ab.banca_id = pb.banca_id
+                    WHERE pb.banca_id = $1
+                    GROUP BY pb.projeto_id
+                ),
+                avaliadores_concluidos AS (
+                    SELECT
+                        pb.projeto_id,
+                        COUNT(DISTINCT n.avaliador_id)::int
+                            AS total_finalizado
+                    FROM projetos_banca pb
+                    LEFT JOIN avaliadores_banca ab
+                        ON ab.banca_id = pb.banca_id
+                    LEFT JOIN notas_por_avaliacao n
+                        ON n.projeto_id = pb.projeto_id
+                       AND n.avaliador_id = ab.usuario_id
+                    WHERE pb.banca_id = $1
+                    GROUP BY pb.projeto_id
+                ),
+                medias AS (
+                    SELECT
+                        n.projeto_id,
+                        ROUND(AVG(n.nota_final), 2) AS media_final,
+                        COUNT(*)::int AS total_avaliacoes
+                    FROM notas_por_avaliacao n
+                    GROUP BY n.projeto_id
+                ),
+                ranking AS (
+                    SELECT
+                        p.id AS projeto_id,
+                        p.titulo,
+                        m.media_final,
+                        m.total_avaliacoes,
+                        RANK() OVER (
+                            ORDER BY m.media_final DESC
+                        ) AS posicao
+                    FROM medias m
+                    INNER JOIN projetos p
+                        ON p.id = m.projeto_id
+                    INNER JOIN avaliadores_esperados ae
+                        ON ae.projeto_id = p.id
+                    INNER JOIN avaliadores_concluidos ac
+                        ON ac.projeto_id = p.id
+                    WHERE p.instituicao_id = $2
+                      AND ae.total_esperado > 0
+                      AND ac.total_finalizado = ae.total_esperado
+                )
+                SELECT
+                    projeto_id,
+                    titulo,
+                    media_final,
+                    total_avaliacoes,
+                    posicao
+                FROM ranking
+                WHERE projeto_id = $3`,
+                [bancaId, instituicaoId, projetoId]
+            );
+
+            if (resultado.rows.length === 0) {
+                return res.status(409).json({
+                    erro: 'O resultado deste projeto ainda não está disponível.'
+                });
+            }
+
+            const dados = resultado.rows[0];
+
+            return res.status(200).json({
+                banca: banca.rows[0],
+                resultado: {
+                    projeto_id: dados.projeto_id,
+                    titulo: dados.titulo,
+                    media_final: Number(dados.media_final),
+                    total_avaliacoes: dados.total_avaliacoes,
+                    posicao: Number(dados.posicao)
+                }
+            });
+
+        } catch (erro) {
+            console.error(
+                'Erro ao consultar resultado do aluno:',
+                erro.message
+            );
+
+            return res.status(500).json({
+                erro: 'Erro interno ao consultar o resultado.'
+            });
+        }
+    }
+);
+
 
 module.exports = router;

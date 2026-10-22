@@ -19,7 +19,7 @@ const perfilUsuario = usuario?.vinculos?.find(
 
     const [nomeNovaBanca, setNomeNovaBanca] = useState('')
     const [salvandoBanca, setSalvandoBanca] = useState(false)
-
+const [encerrandoBancaId, setEncerrandoBancaId] = useState(null)
 
 
     useEffect(() => {
@@ -106,6 +106,55 @@ setUsuario(dadosUsuario.usuario)
         setErro(erro.message)
     }
 }
+
+
+
+async function encerrarBanca(bancaId) {
+    const confirmar = window.confirm(
+        'Tem certeza de que deseja encerrar esta banca?'
+    )
+
+    if (!confirmar) return
+
+    try {
+        setEncerrandoBancaId(bancaId)
+
+        const token = sessionStorage.getItem('token')
+
+        const resposta = await fetch(
+            `http://localhost:3000/bancas/1/${bancaId}/encerrar`,
+            {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        )
+
+        const dados = await resposta.json()
+
+        if (!resposta.ok) {
+            throw new Error(
+                dados.erro || 'Não foi possível encerrar a banca.'
+            )
+        }
+
+        setBancas((bancasAtuais) =>
+            bancasAtuais.map((banca) =>
+                banca.id === bancaId
+                    ? { ...banca, status: dados.banca.status }
+                    : banca
+            )
+        )
+
+        window.alert('Banca encerrada com sucesso!')
+    } catch (erro) {
+        window.alert(erro.message)
+    } finally {
+        setEncerrandoBancaId(null)
+    }
+}
+
 
 async function cadastrarBanca(evento) {
     evento.preventDefault()
@@ -260,6 +309,22 @@ async function cadastrarBanca(evento) {
                                             Abrir banca
                                         </button>
                                     )}
+
+
+                                    
+                                {['admin', 'coordenador'].includes(perfilUsuario) &&
+                                    banca.status === 'aberta' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => encerrarBanca(banca.id)}
+                                            disabled={encerrandoBancaId === banca.id}
+                                        >
+                                            {encerrandoBancaId === banca.id
+                                                ? 'Encerrando...'
+                                                : 'Encerrar banca'}
+                                        </button>
+                                    )}
+
                             </article>
                         ))}
                     </div>
