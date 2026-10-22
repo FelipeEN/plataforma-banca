@@ -16,8 +16,11 @@ const avaliacoesRoutes = require('./routes/avaliacoes.routes');
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:5173'
-}))
+    origin: [
+        'http://localhost:5173',
+        'https://plataforma-banca.vercel.app'
+    ]
+}));
 
 app.use(express.json())
 app.use(express.json());
