@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './Login.css'
 import { useNavigate } from 'react-router-dom'
+import API_URL from '../api.js'
 
 
 
@@ -21,7 +22,7 @@ async function fazerLogin(event) {
   setCarregando(true)
 
   try {
-    const resposta = await fetch('http://localhost:3000/auth/login', {
+    const resposta = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -3,6 +3,7 @@ import '../App.css'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { buscarContextoInstituicao } from '../utils/instituicao'
+import API_URL from '../api.js'
 
 function Avaliacoes() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ function Avaliacoes() {
         const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-          `http://localhost:3000/bancas/${instituicaoId}`,
+          `${API_URL}/bancas/${instituicaoId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './CadastrarInstituicao.css'
+import API_URL from '../api.js'
 
 function CadastrarInstituicao() {
   const navigate = useNavigate()
@@ -28,7 +29,7 @@ async function cadastrarInstituicao(event) {
 
   try {
     const resposta = await fetch(
-      'http://localhost:3000/instituicoes/cadastrar',
+      `${API_URL}/instituicoes/cadastrar`,
       {
         method: 'POST',
         headers: {

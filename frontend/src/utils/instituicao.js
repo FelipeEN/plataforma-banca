@@ -1,4 +1,5 @@
-const API = 'http://localhost:3000'
+import API_URL from '../api.js'
+
 const INSTITUICAO_ATIVA_KEY = 'instituicaoAtivaId'
 
 export async function buscarContextoInstituicao(token) {
@@ -6,7 +7,7 @@ export async function buscarContextoInstituicao(token) {
     throw new Error('Token de autenticação não informado.')
   }
 
-  const resposta = await fetch(`${API}/auth/me`, {
+  const resposta = await fetch(`${API_URL}/auth/me`, {
     headers: {
       Authorization: `Bearer ${token}`
     }

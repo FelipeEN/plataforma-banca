@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { buscarContextoInstituicao } from '../utils/instituicao'
+import API_URL from '../api.js'
 
 function Bancas() {
     const navigate = useNavigate()
@@ -42,7 +43,7 @@ useEffect(() => {
 
             // 3. Busca as bancas da instituição correta
             const resposta = await fetch(
-                `http://localhost:3000/bancas/${idInstituicao}`,
+                `${API_URL}/bancas/${idInstituicao}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -77,7 +78,7 @@ useEffect(() => {
         }
 
         const resposta = await fetch(
-    `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/abrir`,
+    `${API_URL}/bancas/${instituicaoId}/${bancaId}/abrir`,
     {
         method: 'PATCH',
         headers: {
@@ -123,7 +124,7 @@ async function encerrarBanca(bancaId) {
         }
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/encerrar`,
+            `${API_URL}/bancas/${instituicaoId}/${bancaId}/encerrar`,
             {
                 method: 'PATCH',
                 headers: {
@@ -173,7 +174,7 @@ async function publicarBanca(bancaId) {
         }
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/publicar`,
+            `${API_URL}/bancas/${instituicaoId}/${bancaId}/publicar`,
             {
                 method: 'PATCH',
                 headers: {
@@ -218,7 +219,7 @@ async function cadastrarBanca(evento) {
         }
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/${instituicaoId}`,
+            `${API_URL}/bancas/${instituicaoId}`,
             {
                 method: 'POST',
                 headers: {

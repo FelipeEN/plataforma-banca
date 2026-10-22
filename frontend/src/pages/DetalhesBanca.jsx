@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { buscarContextoInstituicao } from '../utils/instituicao'
+import API_URL from '../api.js'
 
 function DetalhesBanca() {
     const { bancaId } = useParams()
@@ -50,7 +51,7 @@ function DetalhesBanca() {
         const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/projetos`,
+            `${API_URL}/bancas/${instituicaoId}/${bancaId}/projetos`,
             {
                 method: 'POST',
                 headers: {
@@ -94,7 +95,7 @@ function DetalhesBanca() {
         const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/avaliadores`,
+            `${API_URL}/bancas/${instituicaoId}/${bancaId}/avaliadores`,
             {
                 method: 'POST',
                 headers: {
@@ -140,7 +141,7 @@ function DetalhesBanca() {
         const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/criterios`,
+            `${API_URL}/bancas/${instituicaoId}/${bancaId}/criterios`,
             {
                 method: 'POST',
                 headers: {
@@ -170,7 +171,7 @@ function DetalhesBanca() {
         setNotaMaximaCriterio('10')
 
         const respostaCriterios = await fetch(
-            `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/criterios`,
+            `${API_URL}/bancas/${instituicaoId}/${bancaId}/criterios`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -223,7 +224,7 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
                 const { instituicaoId } = await buscarContextoInstituicao(token)
 
                 const resposta = await fetch(
-                    `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/projetos`,
+                    `${API_URL}/bancas/${instituicaoId}/${bancaId}/projetos`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -243,7 +244,7 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
                 setProjetos(dados.projetos)
 
                 const respostaCriterios = await fetch(
-                        `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/criterios`,
+                        `${API_URL}/bancas/${instituicaoId}/${bancaId}/criterios`,
                         {
                             headers: {
                                 Authorization: `Bearer ${token}`
@@ -261,7 +262,7 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
                         setCriterios(dadosCriterios.criterios || [])
                     }
                     const respostaAvaliadores = await fetch(
-                        `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/avaliadores`,
+                        `${API_URL}/bancas/${instituicaoId}/${bancaId}/avaliadores`,
                         {
                             headers: {
                                 Authorization: `Bearer ${token}`
@@ -281,7 +282,7 @@ console.log('Pode gerenciar banca:', podeGerenciarBanca)
 
 
                     const respostaDisponiveis = await fetch(
-    `http://localhost:3000/usuarios/avaliadores/${instituicaoId}`,
+    `${API_URL}/usuarios/avaliadores/${instituicaoId}`,
     {
         headers: {
             Authorization: `Bearer ${token}`
@@ -300,7 +301,7 @@ if (!respostaDisponiveis.ok) {
     setAvaliadoresDisponiveis(dadosDisponiveis)
 }
              const respostaProjetos = await fetch(
-    `http://localhost:3000/projetos/${instituicaoId}`,
+    `${API_URL}/projetos/${instituicaoId}`,
     {
         headers: {
             Authorization: `Bearer ${token}`

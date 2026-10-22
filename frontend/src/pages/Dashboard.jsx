@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 import { buscarContextoInstituicao } from '../utils/instituicao'
+import API_URL from '../api.js'
 
 
 function Dashboard() {
@@ -44,7 +45,7 @@ useEffect(() => {
 
 if (perfilAtivo === 'aluno') {
     const respostaMeusProjetos = await fetch(
-        `http://localhost:3000/projetos/${instituicaoId}/meus-projetos`,
+        `${API_URL}/projetos/${instituicaoId}/meus-projetos`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -67,7 +68,7 @@ if (perfilAtivo === 'aluno') {
             console.log('Dados do usuário:', usuarioLogado)
 
             const respostaProjetos = await fetch(
-                 `http://localhost:3000/projetos/${instituicaoId}`,
+                 `${API_URL}/projetos/${instituicaoId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -90,7 +91,7 @@ setTotalProjetos(
         : dadosProjetos.projetos?.length ?? 0
 )
         const respostaBancas = await fetch(
-    `http://localhost:3000/bancas/${instituicaoId}`,
+    `${API_URL}/bancas/${instituicaoId}`,
     {
         headers: {
             Authorization: `Bearer ${token}`
@@ -107,7 +108,7 @@ setTotalProjetos(
             setTotalBancas(dadosBancas.length)
 
 const respostaAvaliacoes = await fetch(
-    `http://localhost:3000/avaliacoes/${instituicaoId}/resumo`,
+    `${API_URL}/avaliacoes/${instituicaoId}/resumo`,
     {
         headers: {
             Authorization: `Bearer ${token}`
@@ -129,7 +130,7 @@ if (!respostaAvaliacoes.ok) {
 
 setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
 const respostaRanking = await fetch(
-    `http://localhost:3000/avaliacoes/${instituicaoId}/ranking/resumo`,
+    `${API_URL}/avaliacoes/${instituicaoId}/ranking/resumo`,
     {
         headers: {
             Authorization: `Bearer ${token}`

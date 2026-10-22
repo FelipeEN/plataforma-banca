@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AssociarUsuario.css'
 import { buscarContextoInstituicao } from '../utils/instituicao'
-
-const API = 'http://localhost:3000'
+import API_URL from '../api.js'
 
 function AssociarUsuario() {
   const navigate = useNavigate()
@@ -46,7 +45,7 @@ const [modoEdicao, setModoEdicao] = useState(false)
 
         setPerfilAtual(vinculo.perfil)
 
-        const respostaUsuarios = await fetch(`${API}/usuarios`, {
+        const respostaUsuarios = await fetch(`${API_URL}/usuarios`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -62,7 +61,7 @@ const [modoEdicao, setModoEdicao] = useState(false)
 
         setUsuarios(dadosUsuarios)
 
-        const respostaVinculos = await fetch(`${API}/vinculos/${contexto.instituicaoId}`, {
+        const respostaVinculos = await fetch(`${API_URL}/vinculos/${contexto.instituicaoId}`, {
   headers: {
     Authorization: `Bearer ${token}`
   }
@@ -109,8 +108,8 @@ async function associarUsuario(event) {
     // Se já existe vínculo, atualiza o perfil.
     // Caso contrário, cria uma nova associação.
     const url = modoEdicao
-        ? `${API}/vinculos/${instituicaoId}/${vinculoId}/perfil`
-        : `${API}/vinculos/${instituicaoId}/associar`
+        ? `${API_URL}/vinculos/${instituicaoId}/${vinculoId}/perfil`
+        : `${API_URL}/vinculos/${instituicaoId}/associar`
 
     const metodo = modoEdicao ? 'PATCH' : 'POST'
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { buscarContextoInstituicao } from '../utils/instituicao'
+import API_URL from '../api.js'
 
 function AvaliarProjeto() {
     const { bancaId, projetoId } = useParams()
@@ -44,7 +45,7 @@ const totalCriterios = criterios.length
                 const { instituicaoId } = await buscarContextoInstituicao(token)
 
                 const respostaBanca = await fetch(
-                    `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/projetos`,
+                    `${API_URL}/bancas/${instituicaoId}/${bancaId}/projetos`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -75,7 +76,7 @@ const totalCriterios = criterios.length
                 setProjeto(projetoEncontrado)
 
                 const respostaCriterios = await fetch(
-                    `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/criterios`,
+                    `${API_URL}/bancas/${instituicaoId}/${bancaId}/criterios`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -136,7 +137,7 @@ async function enviarAvaliacao() {
         const { instituicaoId } = await buscarContextoInstituicao(token)
 
         const resposta = await fetch(
-            `http://localhost:3000/avaliacoes/${instituicaoId}/${bancaId}/${projetoId}`,
+            `${API_URL}/avaliacoes/${instituicaoId}/${bancaId}/${projetoId}`,
             {
                 method: 'POST',
                 headers: {
@@ -162,7 +163,7 @@ async function enviarAvaliacao() {
         }
 
         const respostaFinalizacao = await fetch(
-            `http://localhost:3000/avaliacoes/${instituicaoId}/${bancaId}/${projetoId}/finalizar`,
+            `${API_URL}/avaliacoes/${instituicaoId}/${bancaId}/${projetoId}/finalizar`,
             {
                 method: 'PATCH',
                 headers: {

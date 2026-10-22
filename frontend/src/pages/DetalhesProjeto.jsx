@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import '../App.css'
 import { buscarContextoInstituicao } from '../utils/instituicao'
+import API_URL from '../api.js'
 
 function DetalhesProjeto() {
     const { projetoId } = useParams()
@@ -81,7 +82,7 @@ useEffect(() => {
 
         try {
             const resposta = await fetch(
-                `http://localhost:3000/usuarios/orientadores/${instituicaoId}`,
+                `${API_URL}/usuarios/orientadores/${instituicaoId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -129,7 +130,7 @@ useEffect(() => {
             const token = sessionStorage.getItem('token')
 
             const resposta = await fetch(
-                `http://localhost:3000/usuarios/alunos/${instituicaoId}`,
+                `${API_URL}/usuarios/alunos/${instituicaoId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -162,7 +163,7 @@ useEffect(() => {
                 const contexto = await buscarContextoInstituicao(token)
                 const instituicaoId = contexto.instituicaoId
                 const resposta = await fetch(
-                    `http://localhost:3000/projetos/${instituicaoId}/${projetoId}`,
+                    `${API_URL}/projetos/${instituicaoId}/${projetoId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -203,7 +204,7 @@ useEffect(() => {
                 const contexto = await buscarContextoInstituicao(token)
                 const instituicaoId = contexto.instituicaoId
                 const resposta = await fetch(
-                    `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros`,
+                    `${API_URL}/projetos/${instituicaoId}/${projetoId}/membros`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -252,7 +253,7 @@ useEffect(() => {
 
     try {
         const resposta = await fetch(
-            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/orientadores`,
+            `${API_URL}/projetos/${instituicaoId}/${projetoId}/orientadores`,
             {
                 method: 'POST',
                 headers: {
@@ -286,7 +287,7 @@ useEffect(() => {
 
         // Atualiza a lista de integrantes do projeto.
         const respostaMembros = await fetch(
-            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros`,
+            `${API_URL}/projetos/${instituicaoId}/${projetoId}/membros`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -324,7 +325,7 @@ async function associarAluno() {
 
     try {
         const resposta = await fetch(
-            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/alunos`,
+            `${API_URL}/projetos/${instituicaoId}/${projetoId}/alunos`,
             {
                 method: 'POST',
                 headers: {
@@ -356,7 +357,7 @@ async function associarAluno() {
         setAlunoSelecionado('')
 
         const respostaMembros = await fetch(
-            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros`,
+            `${API_URL}/projetos/${instituicaoId}/${projetoId}/membros`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -398,7 +399,7 @@ async function removerIntegrante(usuarioId) {
         const token = sessionStorage.getItem('token')
 
         const resposta = await fetch(
-            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}/membros/${usuarioId}`,
+            `${API_URL}/projetos/${instituicaoId}/${projetoId}/membros/${usuarioId}`,
             {
                 method: 'DELETE',
                 headers: {
@@ -440,7 +441,7 @@ async function salvarEdicao() {
 
     try {
         const resposta = await fetch(
-            `http://localhost:3000/projetos/${instituicaoId}/${projetoId}`,
+            `${API_URL}/projetos/${instituicaoId}/${projetoId}`,
             {
                 method: 'PUT',
                 headers: {

@@ -3,6 +3,7 @@ import './ConsultaAvaliacoes.css'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { buscarContextoInstituicao } from '../utils/instituicao'
+import API_URL from '../api.js'
 function ConsultaAvaliacoes() {
     const { bancaId, projetoId } = useParams()
     const navigate = useNavigate()
@@ -18,7 +19,7 @@ function ConsultaAvaliacoes() {
                 const { instituicaoId } = await buscarContextoInstituicao(token)
 
                 const resposta = await fetch(
-                    `http://localhost:3000/avaliacoes/${instituicaoId}/${bancaId}/${projetoId}`,
+                    `${API_URL}/avaliacoes/${instituicaoId}/${bancaId}/${projetoId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`

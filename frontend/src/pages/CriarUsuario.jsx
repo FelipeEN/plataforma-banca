@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './CriarUsuario.css'
+import API_URL from '../api.js'
 
 function CriarUsuario() {
   const navigate = useNavigate()
@@ -33,7 +34,7 @@ function CriarUsuario() {
     try {
       setCarregando(true)
 
-      const resposta = await fetch('http://localhost:3000/usuarios', {
+      const resposta = await fetch(`${API_URL}/usuarios`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
