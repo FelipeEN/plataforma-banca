@@ -22,71 +22,95 @@ const perfilUsuario = usuario?.vinculos?.find(
 const [encerrandoBancaId, setEncerrandoBancaId] = useState(null)
 
 
-    useEffect(() => {
-        async function buscarBancas() {
-            try {
-                const token = sessionStorage.getItem('token')
+useEffect(() => {
+    async function buscarBancas() {
+        try {
+            const token = sessionStorage.getItem('token')
 
-                const respostaUsuario = await fetch(
-    'http://localhost:3000/auth/me',
-    {
-        headers: {
-            Authorization: `Bearer ${token}`
+            if (!token) {
+                navigate('/login', { replace: true })
+                return
+            }
+
+            // 1. Busca os dados do usuário autenticado
+            const respostaUsuario = await fetch(
+                'http://localhost:3000/auth/me',
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+
+            const dadosUsuario = await respostaUsuario.json()
+
+            if (!respostaUsuario.ok) {
+                throw new Error(
+                    dadosUsuario.erro ||
+                    'Não foi possível carregar o usuário.'
+                )
+            }
+
+            const usuarioLogado = dadosUsuario.usuario
+            setUsuario(usuarioLogado)
+
+            // 2. Encontra uma instituição com vínculo aprovado
+            const vinculoAtivo = usuarioLogado?.vinculos?.find(
+                (vinculo) => vinculo.status === 'aprovado'
+            )
+
+            if (!vinculoAtivo) {
+                throw new Error(
+                    'Você não possui vínculo aprovado com uma instituição.'
+                )
+            }
+
+            const idInstituicao = Number(vinculoAtivo.instituicao_id)
+
+            setInstituicaoId(idInstituicao)
+
+            // 3. Busca as bancas da instituição correta
+            const resposta = await fetch(
+                `http://localhost:3000/bancas/${idInstituicao}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+
+            const dados = await resposta.json()
+
+            if (!resposta.ok) {
+                throw new Error(
+                    dados.erro || 'Não foi possível carregar as bancas.'
+                )
+            }
+
+            setBancas(Array.isArray(dados) ? dados : dados.bancas || [])
+        } catch (erro) {
+            setErro(erro.message)
+        } finally {
+            setCarregando(false)
         }
     }
-)
 
-const dadosUsuario = await respostaUsuario.json()
-
-if (!respostaUsuario.ok) {
-    throw new Error(
-        dadosUsuario.erro || 'Não foi possível carregar o usuário.'
-    )
-}
-
-setUsuario(dadosUsuario.usuario)
-                const resposta = await fetch(
-                    'http://localhost:3000/bancas/1',
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    }
-                )
-
-                const dados = await resposta.json()
-
-                if (!resposta.ok) {
-                    throw new Error(
-                        dados.erro || 'Não foi possível carregar as bancas.'
-                    )
-                }
-
-                setBancas(dados)
-            } catch (erro) {
-                setErro(erro.message)
-            } finally {
-                setCarregando(false)
-            }
-        }
-
-        buscarBancas()
-    }, [])
+    buscarBancas()
+}, [navigate])
 
     async function abrirBanca(bancaId) {
     try {
         const token = sessionStorage.getItem('token')
 
         const resposta = await fetch(
-            `http://localhost:3000/bancas/1/${bancaId}/abrir`,
-            {
-                method: 'PATCH',
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
-        )
-
+    `http://localhost:3000/bancas/${instituicaoId}/${bancaId}/abrir`,
+    {
+        method: 'PATCH',
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    }
+)
         const dados = await resposta.json()
 
         if (!resposta.ok) {
