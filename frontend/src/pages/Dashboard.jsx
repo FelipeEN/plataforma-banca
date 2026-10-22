@@ -159,6 +159,11 @@ const respostaRanking = await fetch(
     buscarUsuario()
 }, [navigate])
 
+function sair() {
+  sessionStorage.removeItem('token')
+  navigate('/login', { replace: true })
+}
+
   return (
     <div className="aplicacao">
       <aside className="menu-lateral">
@@ -247,19 +252,23 @@ const respostaRanking = await fetch(
   </a>
 )}
         </nav>
-        <div className="perfil">
-          <div className="avatar">FS</div>
-          <div>
-            
-            <strong>
-              {carregando
-              ? 'Carregando...'
-              : usuario
-                  ? usuario.nome
-                  : 'Usuário'}
-        </strong>
-            <span>{usuario ? usuario.email : 'Usuário conectado'}</span>
+        <div className="area-perfil">
+          <div className="perfil">
+            <div className="avatar">FS</div>
+            <div>
+              <strong>
+                {carregando
+                  ? 'Carregando...'
+                  : usuario
+                    ? usuario.nome
+                    : 'Usuário'}
+              </strong>
+              <span>{usuario ? usuario.email : 'Usuário conectado'}</span>
+            </div>
           </div>
+          <button className="botao-sair" type="button" onClick={sair}>
+            Sair
+          </button>
         </div>
       </aside>
 
