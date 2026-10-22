@@ -213,32 +213,26 @@ console.log('É um array?', Array.isArray(dados))
                     'Não foi possível identificar o usuário.'
                 )
             }
-console.log('Vínculos recebidos:', dados.vinculos)
 
-console.log(
-    'Instituição do vínculo:',
-    dados.vinculos?.[0]?.instituicao_id,
-    typeof dados.vinculos?.[0]?.instituicao_id
-)
+            const usuario = dados.usuario ?? dados;
+            const vinculos = Array.isArray(usuario.vinculos)
+                ? usuario.vinculos
+                : [];
 
-console.log(
-    'Status do vínculo:',
-    dados.vinculos?.[0]?.status
-)
+            console.log('Vínculos recebidos:', vinculos);
 
-const vinculo = dados.vinculos?.find(
-    (item) =>
-        Number(item.instituicao_id) === 1 &&
-        item.status === 'aprovado'
-)
+            const vinculo = vinculos.find(
+                (item) =>
+                    Number(item.instituicao_id) === 1 &&
+                    item.status === 'aprovado'
+            );
 
-console.log('Vínculo selecionado:', vinculo)
+            console.log('Vínculo selecionado:', vinculo);
 
-            console.log('Vínculo selecionado:', vinculo)
+            const perfil = vinculo?.perfil || '';
 
-            const perfil = vinculo?.perfil || ''
+            setPerfilUsuario(perfil);
 
-            setPerfilUsuario(perfil)
         } catch (erro) {
             console.error('Erro ao buscar perfil:', erro.message)
         }
