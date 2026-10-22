@@ -115,6 +115,17 @@ async function fazerLogin(event) {
           <p className="login-aviso">
             Acesso destinado aos usuários cadastrados na plataforma.
           </p>
+
+          <p className="login-cadastro-instituicao">
+  Sua instituição ainda não tem uma conta?
+  {' '}
+  <button
+    type="button"
+    onClick={() => navigate('/instituicoes/cadastrar')}
+  >
+    Cadastrar instituição
+  </button>
+</p>
         </form>
       </section>
     </main>

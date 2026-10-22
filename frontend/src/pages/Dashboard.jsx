@@ -15,11 +15,14 @@ const [usuario, setUsuario] = useState(null)
 const [carregando, setCarregando] = useState(true)
 
 const perfilUsuario = usuario?.vinculos?.find(
-    (vinculo) =>
-        vinculo.instituicao_id === 1 &&
-        vinculo.status === 'aprovado'
+    (vinculo) => vinculo.status === 'aprovado'
 )?.perfil
 
+const instituicaoId = usuario?.vinculos?.find(
+    (vinculo) =>
+        vinculo.status === 'aprovado' &&
+        vinculo.perfil === perfilUsuario
+)?.instituicao_id
 
 const [totalProjetos, setTotalProjetos] = useState(0)
 const [totalBancas, setTotalBancas] = useState(0)
@@ -50,18 +53,21 @@ useEffect(() => {
             }
 
             const dados = await resposta.json()
-            setUsuario(dados.usuario)
+        
+              const vinculoAtivo = dados.usuario?.vinculos?.find(
+                  (vinculo) => vinculo.status === 'aprovado'
+              )
 
-            if (
-    dados.usuario?.vinculos?.some(
-        (vinculo) =>
-            vinculo.instituicao_id === 1 &&
-            vinculo.status === 'aprovado' &&
-            vinculo.perfil === 'aluno'
-    )
-) {
+              if (!vinculoAtivo) {
+                  throw new Error('Você não possui vínculo aprovado com uma instituição.')
+              }
+
+              const instituicaoId = vinculoAtivo.instituicao_id
+
+              setUsuario(dados.usuario)
+if (vinculoAtivo.perfil === 'aluno') {
     const respostaMeusProjetos = await fetch(
-        'http://localhost:3000/projetos/1/meus-projetos',
+        `http://localhost:3000/projetos/${instituicaoId}/meus-projetos`,
         {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -84,7 +90,7 @@ useEffect(() => {
             console.log('Dados do usuário:', dados.usuario)
 
             const respostaProjetos = await fetch(
-                'http://localhost:3000/projetos/1',
+                 `http://localhost:3000/projetos/${instituicaoId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -106,14 +112,14 @@ setTotalProjetos(
         ? dadosProjetos.length
         : dadosProjetos.projetos?.length ?? 0
 )
-          const respostaBancas = await fetch(
-                'http://localhost:3000/bancas/1',
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            )
+        const respostaBancas = await fetch(
+    `http://localhost:3000/bancas/${instituicaoId}`,
+    {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    }
+)
 
             if (!respostaBancas.ok) {
                 throw new Error('Não foi possível buscar as bancas.')
@@ -124,7 +130,7 @@ setTotalProjetos(
             setTotalBancas(dadosBancas.length)
 
 const respostaAvaliacoes = await fetch(
-    'http://localhost:3000/avaliacoes/1/resumo',
+    `http://localhost:3000/avaliacoes/${instituicaoId}/resumo`,
     {
         headers: {
             Authorization: `Bearer ${token}`
@@ -145,14 +151,14 @@ if (!respostaAvaliacoes.ok) {
 }
 
 setTotalAvaliacoes(dadosAvaliacoes.total_avaliacoes ?? 0)
-            const respostaRanking = await fetch(
-              'http://localhost:3000/avaliacoes/1/ranking/resumo',
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              }
-            )
+const respostaRanking = await fetch(
+    `http://localhost:3000/avaliacoes/${instituicaoId}/ranking/resumo`,
+    {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    }
+)
 
             if (respostaRanking.ok) {
               const dadosRanking = await respostaRanking.json()

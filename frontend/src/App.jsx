@@ -12,6 +12,10 @@ import AssociarUsuario from './pages/AssociarUsuario.jsx'
 import ConsultaAvaliacoes from './pages/ConsultaAvaliacoes.jsx'
 import CriarUsuario from './pages/CriarUsuario.jsx'
 import ResultadoAluno from './pages/ResultadoAluno.jsx'
+import CadastrarInstituicao from './pages/CadastrarInstituicao.jsx'
+
+
+
 
 function App() {
   return (
@@ -119,13 +123,20 @@ function App() {
       : <Navigate to="/login" replace />
   }
 />
+
 <Route
   path="/usuarios/associar"
   element={
-    <RotaProtegida>
-      <AssociarUsuario />
-    </RotaProtegida>
+    sessionStorage.getItem('token')
+      ? <AssociarUsuario />
+      : <Navigate to="/login" replace />
   }
+/>
+
+
+<Route
+  path="/instituicoes/cadastrar"
+  element={<CadastrarInstituicao />}
 />
 
             <Route path="*" element={<Navigate to="/login" replace />} />

@@ -27,22 +27,60 @@ async function autenticarToken(req, res, next) {
                 v.status
              FROM vinculos_institucionais v
              WHERE v.usuario_id = $1
-               AND v.status = 'aprovado'`,
+               AND v.status = 'aprovado'
+             ORDER BY v.instituicao_id`,
             [usuarioId]
         );
+
+        const vinculos = resultado.rows;
+
+        if (vinculos.length === 0) {
+            return res.status(403).json({
+                erro: 'Você não possui vínculo aprovado com uma instituição.'
+            });
+        }
+
+        // Se a rota informar uma instituição, usa o vínculo
+        // correspondente a ela.
+        const instituicaoSolicitada = req.params.instituicaoId;
+
+        let vinculoAtivo;
+
+        if (instituicaoSolicitada !== undefined) {
+            const instituicaoId = Number(instituicaoSolicitada);
+
+            vinculoAtivo = vinculos.find(
+                (vinculo) =>
+                    Number(vinculo.instituicao_id) === instituicaoId
+            );
+
+            if (!vinculoAtivo) {
+                return res.status(403).json({
+                    erro: 'Você não possui vínculo aprovado com esta instituição.'
+                });
+            }
+        } else {
+            // Rotas sem instituição na URL usam o primeiro vínculo
+            // aprovado como padrão.
+            vinculoAtivo = vinculos[0];
+        }
 
         req.usuario = {
             id: usuarioId,
             email: dadosUsuario.email,
-            vinculos: resultado.rows
+            instituicaoId: Number(vinculoAtivo.instituicao_id),
+            perfil: vinculoAtivo.perfil,
+            vinculos
         };
 
-        next();
+        return next();
 
     } catch (erro) {
-        if (erro.name === 'JsonWebTokenError' ||
+        if (
+            erro.name === 'JsonWebTokenError' ||
             erro.name === 'TokenExpiredError' ||
-            erro.name === 'NotBeforeError') {
+            erro.name === 'NotBeforeError'
+        ) {
             return res.status(401).json({
                 erro: 'Token inválido ou expirado.'
             });

@@ -1,0 +1,161 @@
+.cadastro-instituicao {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f7f6fa;
+  color: #2c2429;
+}
+
+.cadastro-instituicao-apresentacao {
+  padding: 48px;
+  background: #2c2429;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+}
+
+.cadastro-instituicao-marca {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: white;
+  text-decoration: none;
+}
+
+.cadastro-instituicao-marca strong {
+  font-size: 26px;
+}
+
+.cadastro-instituicao-marca span {
+  color: #d7ced5;
+  font-size: 14px;
+}
+
+.cadastro-instituicao-apresentacao > div > span,
+.cadastro-instituicao-formulario > div > span {
+  color: #8a70ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.cadastro-instituicao-apresentacao h1 {
+  max-width: 500px;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.15;
+}
+
+.cadastro-instituicao-apresentacao p {
+  max-width: 440px;
+  color: #d7ced5;
+  line-height: 1.7;
+}
+
+.cadastro-instituicao-formulario-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 24px;
+}
+
+.cadastro-instituicao-formulario {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cadastro-instituicao-formulario h2 {
+  margin-bottom: 8px;
+}
+
+.cadastro-instituicao-formulario > div > p {
+  color: #716a73;
+  line-height: 1.5;
+}
+
+.cadastro-instituicao-formulario label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cadastro-instituicao-formulario input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  border: 1px solid #ddd7e3;
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+  outline: none;
+}
+
+.cadastro-instituicao-formulario input:focus {
+  border-color: #6d4aff;
+  box-shadow: 0 0 0 3px #6d4aff20;
+}
+
+.cadastro-instituicao-formulario button {
+  margin-top: 12px;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #6d4aff;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cadastro-instituicao-formulario button:hover {
+  background: #5838e8;
+}
+
+.cadastro-instituicao-formulario > p {
+  text-align: center;
+  font-size: 14px;
+}
+
+.cadastro-instituicao-formulario a {
+  color: #6d4aff;
+  font-weight: 600;
+}
+
+.cadastro-instituicao-mensagem {
+  color: #b42318;
+  font-size: 14px;
+}
+
+.login-cadastro-instituicao {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.login-cadastro-instituicao button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #6d4aff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  .cadastro-instituicao {
+    grid-template-columns: 1fr;
+  }
+
+  .cadastro-instituicao-apresentacao {
+    padding: 32px 24px;
+    gap: 48px;
+  }
+
+  .cadastro-instituicao-apresentacao h1 {
+    font-size: 34px;
+  }
+}

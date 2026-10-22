@@ -17,6 +17,10 @@ function AssociarUsuario() {
   const [carregando, setCarregando] = useState(true)
   const [enviando, setEnviando] = useState(false)
 
+const [vinculos, setVinculos] = useState([])
+const [vinculoId, setVinculoId] = useState('')
+const [modoEdicao, setModoEdicao] = useState(false)
+
   useEffect(() => {
     async function buscarDados() {
       try {
@@ -74,6 +78,22 @@ function AssociarUsuario() {
         }
 
         setUsuarios(dadosUsuarios)
+
+        const respostaVinculos = await fetch(`${API}/vinculos/${INSTITUICAO_ID}`, {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
+
+const dadosVinculos = await respostaVinculos.json()
+
+if (!respostaVinculos.ok) {
+  throw new Error(
+    dadosVinculos.erro || 'Não foi possível carregar os vínculos.'
+  )
+}
+
+setVinculos(dadosVinculos)
       } catch (error) {
         setErro(
           error.message === 'Failed to fetch'
@@ -88,68 +108,91 @@ function AssociarUsuario() {
     buscarDados()
   }, [navigate])
 
-  async function associarUsuario(event) {
-    event.preventDefault()
-    setMensagem('')
-    setErro('')
+async function associarUsuario(event) {
+  event.preventDefault()
+  setMensagem('')
+  setErro('')
 
-    if (!usuarioId || !perfil) {
-      setErro('Selecione um usuário e um perfil.')
-      return
+  if (!usuarioId || !perfil) {
+    setErro('Selecione um usuário e um perfil.')
+    return
+  }
+
+  try {
+    setEnviando(true)
+
+    const token = sessionStorage.getItem('token')
+
+    // Se já existe vínculo, atualiza o perfil.
+    // Caso contrário, cria uma nova associação.
+    const url = modoEdicao
+      ? `${API}/vinculos/${INSTITUICAO_ID}/${vinculoId}/perfil`
+      : `${API}/vinculos/${INSTITUICAO_ID}/associar`
+
+    const metodo = modoEdicao ? 'PATCH' : 'POST'
+
+    const corpo = modoEdicao
+      ? { perfil }
+      : {
+          usuario_id: Number(usuarioId),
+          perfil
+        }
+
+    const resposta = await fetch(url, {
+      method: metodo,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(corpo)
+    })
+
+    const dados = await resposta.json()
+
+    if (!resposta.ok) {
+      throw new Error(
+        dados.erro || 'Não foi possível salvar a associação.'
+      )
     }
 
-    try {
-      setEnviando(true)
+    const usuarioSelecionado = usuarios.find(
+      (usuario) => Number(usuario.id) === Number(usuarioId)
+    )
 
-      const token = sessionStorage.getItem('token')
-
-      const resposta = await fetch(
-        `${API}/vinculos/${INSTITUICAO_ID}/associar`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            usuario_id: Number(usuarioId),
-            perfil
-          })
-        }
-      )
-
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        throw new Error(
-          dados.erro || 'Não foi possível associar o usuário.'
+    if (modoEdicao) {
+      setVinculos((lista) =>
+        lista.map((item) =>
+          Number(item.id) === Number(vinculoId)
+            ? { ...item, perfil: dados.vinculo.perfil }
+            : item
         )
-      }
-
-      const usuarioAssociado = usuarios.find(
-        (usuario) => Number(usuario.id) === Number(usuarioId)
       )
 
       setMensagem(
-        `${usuarioAssociado?.nome ?? 'Usuário'} foi associado como ${perfil}.`
+        `Perfil de ${usuarioSelecionado?.nome ?? 'usuário'} atualizado para ${perfil}.`
       )
+    } else {
+      setVinculos((lista) => [...lista, dados.vinculo])
 
-      setUsuarios((lista) =>
-        lista.filter((usuario) => Number(usuario.id) !== Number(usuarioId))
+      setMensagem(
+        `${usuarioSelecionado?.nome ?? 'Usuário'} foi associado como ${perfil}.`
       )
-
-      setUsuarioId('')
-      setPerfil('avaliador')
-    } catch (error) {
-      setErro(
-        error.message === 'Failed to fetch'
-          ? 'Não foi possível conectar à API.'
-          : error.message
-      )
-    } finally {
-      setEnviando(false)
     }
+
+    setUsuarioId('')
+    setVinculoId('')
+    setModoEdicao(false)
+    setPerfil('avaliador')
+  } catch (error) {
+    setErro(
+      error.message === 'Failed to fetch'
+        ? 'Não foi possível conectar à API.'
+        : error.message
+    )
+  } finally {
+    setEnviando(false)
   }
+}
 
   const perfisDisponiveis =
     perfilAtual === 'admin'
@@ -217,21 +260,37 @@ function AssociarUsuario() {
               <div className="campo-associar">
                 <label htmlFor="usuarioId">Usuário</label>
 
-                <select
-                  id="usuarioId"
-                  value={usuarioId}
-                  onChange={(event) => setUsuarioId(event.target.value)}
-                  required
-                >
-                  <option value="">Selecione um usuário</option>
+<select
+  id="usuarioId"
+  value={usuarioId}
+  onChange={(event) => {
+    const idSelecionado = event.target.value
+    setUsuarioId(idSelecionado)
 
-                  {usuarios.map((usuario) => (
-                    <option key={usuario.id} value={usuario.id}>
-                      {usuario.nome} — {usuario.email}
-                    </option>
-                  ))}
-                </select>
+    const vinculoExistente = vinculos.find(
+      (item) => Number(item.usuario_id) === Number(idSelecionado)
+    )
 
+    if (vinculoExistente) {
+      setVinculoId(String(vinculoExistente.id))
+      setModoEdicao(true)
+      setPerfil(vinculoExistente.perfil)
+    } else {
+      setVinculoId('')
+      setModoEdicao(false)
+      setPerfil('avaliador')
+    }
+  }}
+  required
+>
+  <option value="">Selecione um usuário</option>
+
+  {usuarios.map((usuario) => (
+    <option key={usuario.id} value={usuario.id}>
+      {usuario.nome} — {usuario.email}
+    </option>
+  ))}
+</select>
                 {usuarios.length === 0 && (
                   <small>
                     Não há contas disponíveis para associar.
@@ -256,13 +315,17 @@ function AssociarUsuario() {
                 </select>
               </div>
 
-              <button
+                <button
                 type="submit"
                 className="botao-confirmar-associacao"
                 disabled={enviando || usuarios.length === 0}
-              >
-                {enviando ? 'Associando...' : 'Associar usuário'}
-              </button>
+                >
+                {enviando
+                    ? 'Salvando...'
+                    : modoEdicao
+                    ? 'Atualizar perfil'
+                    : 'Associar usuário'}
+                </button>
             </form>
           )}
         </section>

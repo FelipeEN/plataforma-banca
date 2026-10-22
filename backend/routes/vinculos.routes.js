@@ -312,4 +312,75 @@ router.post(
         }
     }
 );
+
+
+// Alterar o perfil de um vínculo já existente
+router.patch(
+    '/:instituicaoId/:id/perfil',
+    autenticarToken,
+    autorizarPerfil('admin'),
+    async (req, res) => {
+        try {
+            const instituicaoId = req.usuario.instituicaoId;
+            const vinculoId = Number(req.params.id);
+            const { perfil } = req.body || {};
+
+            const perfisPermitidos = [
+                'admin',
+                'coordenador',
+                'orientador',
+                'avaliador',
+                'aluno'
+            ];
+
+            if (!Number.isInteger(vinculoId) || vinculoId <= 0) {
+                return res.status(400).json({
+                    erro: 'ID do vínculo inválido.'
+                });
+            }
+
+            if (!perfisPermitidos.includes(perfil)) {
+                return res.status(400).json({
+                    erro: 'Informe um perfil válido.'
+                });
+            }
+
+            const resultado = await pool.query(
+                `UPDATE vinculos_institucionais
+                 SET perfil = $1
+                 WHERE id = $2
+                   AND instituicao_id = $3
+                   AND status = 'aprovado'
+                 RETURNING
+                    id,
+                    usuario_id,
+                    instituicao_id,
+                    perfil,
+                    status`,
+                [perfil, vinculoId, instituicaoId]
+            );
+
+            if (resultado.rows.length === 0) {
+                return res.status(404).json({
+                    erro: 'Vínculo aprovado não encontrado nesta instituição.'
+                });
+            }
+
+            return res.json({
+                mensagem: 'Perfil atualizado com sucesso.',
+                vinculo: resultado.rows[0]
+            });
+
+        } catch (erro) {
+            console.error(
+                'Erro ao atualizar perfil do vínculo:',
+                erro.message
+            );
+
+            return res.status(500).json({
+                erro: 'Erro interno ao atualizar o perfil.'
+            });
+        }
+    }
+);
 module.exports = router;
