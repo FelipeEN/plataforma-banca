@@ -33,11 +33,23 @@ router.post('/', autenticarToken, async (req, res) => {
         const resultado = await pool.query(
             `INSERT INTO vinculos_institucionais
                 (usuario_id, instituicao_id, perfil)
-             VALUES ($1, $2, 'aluno')
+             SELECT u.id, $2, 'aluno'
+             FROM usuarios u
+             WHERE u.id = $1
+               AND (
+                   u.email_verification_required = FALSE
+                   OR u.email_verified_at IS NOT NULL
+               )
              RETURNING id, usuario_id, instituicao_id,
                        perfil, status, criado_em`,
             [req.usuario.id, instituicaoId]
         );
+
+        if (resultado.rows.length === 0) {
+            return res.status(403).json({
+                erro: 'Confirme o e-mail da conta antes de solicitar um vínculo institucional.'
+            });
+        }
 
         return res.status(201).json(resultado.rows[0]);
 
@@ -266,7 +278,16 @@ router.patch(
                      status = 'aprovado'
                  WHERE id = $2
                    AND instituicao_id = $3
-                   AND status = 'pendente'
+                   AND status IN ('pendente', 'rejeitado')
+                   AND EXISTS (
+                       SELECT 1
+                       FROM usuarios u
+                       WHERE u.id = vinculos_institucionais.usuario_id
+                         AND (
+                             u.email_verification_required = FALSE
+                             OR u.email_verified_at IS NOT NULL
+                         )
+                   )
                  RETURNING id, usuario_id, instituicao_id,
                            perfil, status`,
                 [perfil, vinculoId, instituicaoId]
@@ -274,7 +295,7 @@ router.patch(
 
             if (resultado.rows.length === 0) {
                 return res.status(404).json({
-                    erro: 'Vínculo pendente não encontrado nesta instituição.'
+                    erro: 'Vínculo pendente ou rejeitado não encontrado nesta instituição.'
                 });
             }
 
@@ -384,13 +405,17 @@ router.post(
             const usuario = await pool.query(
                 `SELECT id
                  FROM usuarios
-                 WHERE id = $1`,
+                 WHERE id = $1
+                   AND (
+                       email_verification_required = FALSE
+                       OR email_verified_at IS NOT NULL
+                   )`,
                 [usuarioId]
             );
 
             if (usuario.rows.length === 0) {
                 return res.status(404).json({
-                    erro: 'Usuário não encontrado.'
+                    erro: 'Usuário não encontrado ou ainda não confirmou o e-mail.'
                 });
             }
 

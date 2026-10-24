@@ -27,6 +27,7 @@ function AssociarUsuario() {
 
 const [vinculos, setVinculos] = useState([])
 const [vinculoId, setVinculoId] = useState('')
+const [statusVinculoCandidato, setStatusVinculoCandidato] = useState('')
 const [modoEdicao, setModoEdicao] = useState(false)
 
   useEffect(() => {
@@ -134,6 +135,7 @@ async function buscarCandidato(event) {
     setUsuarios([])
     setUsuarioId('')
     setVinculoId('')
+    setStatusVinculoCandidato('')
     setModoEdicao(false)
 
     const resposta = await fetch(
@@ -168,15 +170,19 @@ async function buscarCandidato(event) {
       (item) => Number(item.usuario_id) === Number(dados.id)
     )
 
+    setStatusVinculoCandidato(vinculoExistente?.status || '')
+
     if (vinculoExistente && perfilAtual === 'admin') {
       setVinculoId(String(vinculoExistente.id))
-      setModoEdicao(true)
+      setModoEdicao(vinculoExistente.status === 'aprovado')
       setPerfil(vinculoExistente.perfil)
     } else {
       setVinculoId('')
       setModoEdicao(false)
       if (!vinculoExistente) {
         setPerfil('avaliador')
+      } else {
+        setPerfil(vinculoExistente.perfil)
       }
     }
   } catch (error) {
@@ -290,6 +296,7 @@ async function excluirVinculo(usuario) {
     if (Number(usuarioId) === usuarioIdParaExcluir) {
       setUsuarioId('')
       setVinculoId('')
+      setStatusVinculoCandidato('')
       setModoEdicao(false)
       setPerfil('avaliador')
     }
@@ -327,9 +334,26 @@ async function associarUsuario(event) {
   const vinculoExistente = vinculos.some(
     (item) => Number(item.usuario_id) === Number(usuarioId)
   )
+  const dadosVinculoExistente = vinculos.find(
+    (item) => Number(item.usuario_id) === Number(usuarioId)
+  )
 
   if (vinculoExistente && perfilAtual !== 'admin') {
-    setErro('Somente administradores podem atualizar o perfil de um vínculo existente.')
+    setErro(
+      'Somente administradores podem aprovar, reativar ou atualizar vínculos existentes.'
+    )
+    return
+  }
+
+  const reativandoRejeitado =
+    dadosVinculoExistente?.status === 'rejeitado'
+
+  if (
+    reativandoRejeitado &&
+    !window.confirm(
+      'Reativar o vínculo rejeitado nesta instituição com o perfil selecionado?'
+    )
+  ) {
     return
   }
 
@@ -338,15 +362,17 @@ async function associarUsuario(event) {
 
     const token = sessionStorage.getItem('token')
 
-    // Se já existe vínculo, atualiza o perfil.
-    // Caso contrário, cria uma nova associação.
-    const url = modoEdicao
+    const aprovandoOuReativando =
+      ['pendente', 'rejeitado'].includes(dadosVinculoExistente?.status)
+    const url = aprovandoOuReativando
+      ? `${API_URL}/vinculos/${instituicaoId}/${vinculoId}/aprovar`
+      : modoEdicao
         ? `${API_URL}/vinculos/${instituicaoId}/${vinculoId}/perfil`
         : `${API_URL}/vinculos/${instituicaoId}/associar`
 
-    const metodo = modoEdicao ? 'PATCH' : 'POST'
+    const metodo = modoEdicao || aprovandoOuReativando ? 'PATCH' : 'POST'
 
-    const corpo = modoEdicao
+    const corpo = modoEdicao || aprovandoOuReativando
       ? { perfil }
       : {
           usuario_id: Number(usuarioId),
@@ -373,18 +399,27 @@ async function associarUsuario(event) {
     const usuarioSelecionado = usuarios.find(
       (usuario) => Number(usuario.id) === Number(usuarioId)
     )
+    const vinculoSalvo = dados.vinculo || dados
 
-    if (modoEdicao) {
+    if (modoEdicao || aprovandoOuReativando) {
       setVinculos((lista) =>
         lista.map((item) =>
           Number(item.id) === Number(vinculoId)
-            ? { ...item, perfil: dados.vinculo.perfil }
+            ? {
+                ...item,
+                perfil: vinculoSalvo.perfil,
+                status: vinculoSalvo.status
+              }
             : item
         )
       )
 
       setMensagem(
-        `Perfil de ${usuarioSelecionado?.nome ?? 'usuário'} atualizado para ${perfil}.`
+        dadosVinculoExistente?.status === 'rejeitado'
+          ? `Vínculo de ${usuarioSelecionado?.nome ?? 'usuário'} reativado como ${perfil}.`
+          : dadosVinculoExistente?.status === 'pendente'
+            ? `Vínculo de ${usuarioSelecionado?.nome ?? 'usuário'} aprovado como ${perfil}.`
+            : `Perfil de ${usuarioSelecionado?.nome ?? 'usuário'} atualizado para ${perfil}.`
       )
     } else {
       setVinculos((lista) => [...lista, dados.vinculo])
@@ -398,6 +433,7 @@ async function associarUsuario(event) {
     setEmailCandidato('')
     setUsuarioId('')
     setVinculoId('')
+    setStatusVinculoCandidato('')
     setModoEdicao(false)
     setPerfil('avaliador')
   } catch (error) {
@@ -511,11 +547,25 @@ async function associarUsuario(event) {
                   (item) => Number(item.usuario_id) === Number(usuarioId)
                 ) ? (
                 <p role="status">
-                  Esta conta já possui vínculo com a instituição. Somente
-                  administradores podem atualizar o perfil.
+                  Esta conta já possui vínculo com a instituição. A aprovação,
+                  reativação ou atualização do perfil cabe somente a um
+                  administrador.
                 </p>
               ) : (
                 <form onSubmit={associarUsuario}>
+                  {statusVinculoCandidato === 'pendente' && (
+                    <p role="status">
+                      Esta conta tem um vínculo pendente. Ao continuar, o
+                      administrador aprovará esse vínculo com o perfil
+                      selecionado.
+                    </p>
+                  )}
+                  {statusVinculoCandidato === 'rejeitado' && (
+                    <p role="status">
+                      Esta conta tem um vínculo rejeitado. O administrador
+                      poderá reativar o mesmo vínculo com o perfil selecionado.
+                    </p>
+                  )}
                   <div className="campo-associar">
                     <label htmlFor="usuarioId">Usuário</label>
                     <select
@@ -533,10 +583,15 @@ async function associarUsuario(event) {
 
                         if (vinculoExistente) {
                           setVinculoId(String(vinculoExistente.id))
-                          setModoEdicao(true)
+                          setStatusVinculoCandidato(vinculoExistente.status)
+                          setModoEdicao(
+                            perfilAtual === 'admin' &&
+                              vinculoExistente.status === 'aprovado'
+                          )
                           setPerfil(vinculoExistente.perfil)
                         } else {
                           setVinculoId('')
+                          setStatusVinculoCandidato('')
                           setModoEdicao(false)
                           setPerfil('avaliador')
                         }
@@ -577,6 +632,10 @@ async function associarUsuario(event) {
                       ? 'Salvando...'
                       : modoEdicao
                         ? 'Atualizar perfil'
+                        : statusVinculoCandidato === 'pendente'
+                          ? 'Aprovar vínculo'
+                          : statusVinculoCandidato === 'rejeitado'
+                            ? 'Reativar vínculo'
                         : 'Associar usuário'}
                   </button>
                 </form>

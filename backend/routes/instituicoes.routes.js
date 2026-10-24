@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Protótipo público: exige aprovação centralizada e provisionamento seguro antes de produção.
 router.post('/', async (req, res) => {
     try {
         const { nome } = req.body || {};
@@ -38,7 +39,6 @@ router.post('/', async (req, res) => {
         );
 
         return res.status(201).json(resultado.rows[0]);
-
     } catch (erro) {
         console.error('Erro ao cadastrar instituição:', erro.message);
 
@@ -48,6 +48,7 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Protótipo público: concede o primeiro admin sem aprovação; não publicar assim.
 router.post('/cadastrar', async (req, res) => {
     const { nomeInstituicao, nomeResponsavel, email, senha } = req.body || {};
 
@@ -79,7 +80,6 @@ router.post('/cadastrar', async (req, res) => {
         );
 
         const instituicao = resultadoInstituicao.rows[0];
-
         const senhaHash = await bcrypt.hash(senha, 10);
 
         const resultadoUsuario = await cliente.query(
@@ -94,7 +94,6 @@ router.post('/cadastrar', async (req, res) => {
         );
 
         const usuario = resultadoUsuario.rows[0];
-
         const resultadoVinculo = await cliente.query(
             `INSERT INTO vinculos_institucionais
                 (usuario_id, instituicao_id, perfil, status)
@@ -111,7 +110,6 @@ router.post('/cadastrar', async (req, res) => {
             administrador: usuario,
             vinculo: resultadoVinculo.rows[0]
         });
-
     } catch (erro) {
         await cliente.query('ROLLBACK');
 
@@ -126,7 +124,6 @@ router.post('/cadastrar', async (req, res) => {
         return res.status(500).json({
             erro: 'Erro interno ao cadastrar instituição.'
         });
-
     } finally {
         cliente.release();
     }

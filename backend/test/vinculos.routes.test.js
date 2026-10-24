@@ -24,6 +24,9 @@ let contasCandidatas;
 let vinculosParaRemover;
 let consultasGerenciamento;
 let consultasExclusao;
+let cadastrosPublicos;
+let falharCadastroDuplicado;
+let vinculosParaAprovar;
 let conexoesCriadas;
 let falharNaExclusao;
 let falharNoRollback;
@@ -57,6 +60,35 @@ function instalarMocks() {
             return { rows: [] };
         }
 
+        if (sql.startsWith('update vinculos_institucionais')) {
+            assert.match(sql, /status in \('pendente', 'rejeitado'\)/);
+            const vinculo = vinculosParaAprovar.find(
+                (item) =>
+                    Number(item.id) === Number(parametros[1]) &&
+                    Number(item.instituicao_id) === Number(parametros[2]) &&
+                    ['pendente', 'rejeitado'].includes(item.status)
+            );
+
+            if (!vinculo) {
+                return { rows: [], rowCount: 0 };
+            }
+
+            vinculo.perfil = parametros[0];
+            vinculo.status = 'aprovado';
+            return { rows: [{ ...vinculo }] };
+        }
+
+        if (sql.startsWith('insert into usuarios')) {
+            cadastrosPublicos.push({ sql, parametros });
+            if (falharCadastroDuplicado) {
+                throw Object.assign(new Error('E-mail duplicado.'), {
+                    code: '23505'
+                });
+            }
+
+            return { rows: [] };
+        }
+
         if (sql.includes('distinct on (u.id)')) {
             assert.match(sql, /v\.instituicao_id\s*=\s*\$1/);
             assert.match(sql, /v\.status\s*=\s*'aprovado'/);
@@ -86,18 +118,20 @@ function instalarMocks() {
         }
 
         if (sql.includes('where lower(u.email) = lower($1)')) {
-            assert.match(sql, /not exists/);
+            assert.match(sql, /\$3 = 'admin'/);
             consultasGerenciamento.push(parametros);
             const email = String(parametros[0]).toLowerCase();
             const instituicaoId = Number(parametros[1]);
+            const perfil = parametros[2];
             const conta = contasCandidatas.find(
                 (item) =>
                     item.email.toLowerCase() === email &&
-                    !item.vinculos.some(
-                        (vinculo) =>
-                            Number(vinculo.instituicao_id) === instituicaoId &&
-                            vinculo.status !== 'aprovado'
-                    )
+                    (perfil === 'admin' ||
+                        !item.vinculos.some(
+                            (vinculo) =>
+                                Number(vinculo.instituicao_id) === instituicaoId &&
+                                vinculo.status !== 'aprovado'
+                        ))
             );
 
             return {
@@ -254,11 +288,20 @@ describe('rotas institucionais de usuários', { concurrency: false }, () => {
                 nome: 'Gabi',
                 email: 'gabi@teste.local',
                 vinculos: [{ instituicao_id: 22, status: 'aprovado' }]
+            },
+            {
+                id: 9,
+                nome: 'Hugo',
+                email: 'hugo@teste.local',
+                vinculos: [{ instituicao_id: 22, status: 'rejeitado' }]
             }
         ];
         vinculosParaRemover = [];
         consultasGerenciamento = [];
         consultasExclusao = [];
+        cadastrosPublicos = [];
+        falharCadastroDuplicado = false;
+        vinculosParaAprovar = [];
         conexoesCriadas = 0;
         falharNaExclusao = false;
         falharNoRollback = false;
@@ -292,6 +335,73 @@ describe('rotas institucionais de usuários', { concurrency: false }, () => {
         assert.deepEqual(consultasGerenciamento, [[22]]);
     });
 
+    it('cria conta global sem autenticação e ignora privilégios enviados pelo cliente', async () => {
+        const resposta = await requisicao('/usuarios/cadastro', {
+            method: 'POST',
+            token: false,
+            body: {
+                nome: '  Eva  ',
+                email: ' EVA@teste.local ',
+                senha: 'senha-segura-123',
+                instituicao_id: 22,
+                perfil: 'admin',
+                status: 'aprovado'
+            }
+        });
+        const dados = await resposta.json();
+
+        assert.equal(resposta.status, 202);
+        assert.match(dados.mensagem, /não recebe acesso institucional automaticamente/);
+        assert.match(cadastrosPublicos[0].sql, /insert into usuarios \(nome, email, senha_hash\)/);
+        assert.deepEqual(cadastrosPublicos[0].parametros.slice(0, 2), [
+            'Eva',
+            'eva@teste.local'
+        ]);
+        assert.notEqual(cadastrosPublicos[0].parametros[2], 'senha-segura-123');
+        assert.equal(cadastrosPublicos.length, 1);
+    });
+
+    it('retorna a mesma resposta para cadastro novo e e-mail duplicado', async () => {
+        const body = {
+            nome: 'Eva',
+            email: 'eva@teste.local',
+            senha: 'senha-segura-123'
+        };
+        const respostaNova = await requisicao('/usuarios/cadastro', {
+            method: 'POST',
+            token: false,
+            body
+        });
+        const dadosNovos = await respostaNova.json();
+
+        falharCadastroDuplicado = true;
+        const respostaDuplicada = await requisicao('/usuarios/cadastro', {
+            method: 'POST',
+            token: false,
+            body
+        });
+        const dadosDuplicados = await respostaDuplicada.json();
+
+        assert.equal(respostaNova.status, 202);
+        assert.equal(respostaDuplicada.status, 202);
+        assert.deepEqual(dadosDuplicados, dadosNovos);
+    });
+
+    it('rejeita dados inválidos do cadastro público sem consultar o banco', async () => {
+        const resposta = await requisicao('/usuarios/cadastro', {
+            method: 'POST',
+            token: false,
+            body: {
+                nome: 'Eva',
+                email: 'email-inválido',
+                senha: 'curta'
+            }
+        });
+
+        assert.equal(resposta.status, 400);
+        assert.equal(cadastrosPublicos.length, 0);
+    });
+
     it('busca no máximo uma conta pelo e-mail exato sob autorização institucional', async () => {
         const resposta = await requisicao('/usuarios/22/candidatos', {
             method: 'POST',
@@ -305,22 +415,87 @@ describe('rotas institucionais de usuários', { concurrency: false }, () => {
             nome: 'Eva',
             email: 'eva@teste.local'
         });
-        assert.deepEqual(consultasGerenciamento, [['EVA@teste.local', 22]]);
+        assert.deepEqual(consultasGerenciamento, [['EVA@teste.local', 22, 'admin']]);
     });
 
-    it('não oferece conta com vínculo pendente e rejeita e-mail ausente', async () => {
+    it('não oferece vínculos pendentes ou rejeitados a coordenadores', async () => {
+        vinculosAutenticados = [
+            { instituicao_id: 22, perfil: 'coordenador', status: 'aprovado' }
+        ];
         const respostaPendente = await requisicao('/usuarios/22/candidatos', {
+            usuarioId: 1,
             method: 'POST',
             body: { email: 'fabi@teste.local' }
         });
-        const respostaSemEmail = await requisicao(
-            '/usuarios/22/candidatos',
-            { method: 'POST' }
-        );
+        const respostaRejeitada = await requisicao('/usuarios/22/candidatos', {
+            method: 'POST',
+            body: { email: 'hugo@teste.local' }
+        });
 
         assert.equal(respostaPendente.status, 404);
-        assert.equal(respostaSemEmail.status, 400);
-        assert.deepEqual(consultasGerenciamento, [['fabi@teste.local', 22]]);
+        assert.equal(respostaRejeitada.status, 404);
+        assert.deepEqual(consultasGerenciamento, [
+            ['fabi@teste.local', 22, 'coordenador'],
+            ['hugo@teste.local', 22, 'coordenador']
+        ]);
+    });
+
+    it('permite que administrador localize conta com vínculo rejeitado', async () => {
+        const resposta = await requisicao('/usuarios/22/candidatos', {
+            method: 'POST',
+            body: { email: 'hugo@teste.local' }
+        });
+        const dados = await resposta.json();
+
+        assert.equal(resposta.status, 200);
+        assert.equal(dados.id, 9);
+    });
+
+    it('permite que administrador reative explicitamente o vínculo rejeitado existente', async () => {
+        vinculosParaAprovar = [
+            {
+                id: 901,
+                usuario_id: 9,
+                instituicao_id: 22,
+                perfil: 'aluno',
+                status: 'rejeitado'
+            }
+        ];
+
+        const resposta = await requisicao('/vinculos/22/901/aprovar', {
+            method: 'PATCH',
+            body: { perfil: 'orientador' }
+        });
+        const dados = await resposta.json();
+
+        assert.equal(resposta.status, 200);
+        assert.equal(dados.status, 'aprovado');
+        assert.equal(dados.perfil, 'orientador');
+        assert.equal(vinculosParaAprovar.length, 1);
+        assert.equal(vinculosParaAprovar[0].id, 901);
+    });
+
+    it('não permite que coordenador reative vínculo rejeitado', async () => {
+        vinculosAutenticados = [
+            { instituicao_id: 22, perfil: 'coordenador', status: 'aprovado' }
+        ];
+        vinculosParaAprovar = [
+            {
+                id: 902,
+                usuario_id: 9,
+                instituicao_id: 22,
+                perfil: 'aluno',
+                status: 'rejeitado'
+            }
+        ];
+
+        const resposta = await requisicao('/vinculos/22/902/aprovar', {
+            method: 'PATCH',
+            body: { perfil: 'aluno' }
+        });
+
+        assert.equal(resposta.status, 403);
+        assert.equal(vinculosParaAprovar[0].status, 'rejeitado');
     });
 
     it('não expõe mais o diretório global de contas por GET /usuarios', async () => {

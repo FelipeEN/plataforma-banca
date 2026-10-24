@@ -22,7 +22,8 @@ router.post('/login', async (req, res) => {
         }
 
         const resultado = await pool.query(
-            `SELECT id, nome, email, senha_hash
+            `SELECT id, nome, email, senha_hash,
+                    email_verification_required, email_verified_at
              FROM usuarios
              WHERE email = $1`,
             [email.trim().toLowerCase()]
@@ -44,6 +45,15 @@ router.post('/login', async (req, res) => {
         if (!senhaCorreta) {
             return res.status(401).json({
                 erro: 'E-mail ou senha inválidos.'
+            });
+        }
+
+        if (
+            usuario.email_verification_required &&
+            !usuario.email_verified_at
+        ) {
+            return res.status(403).json({
+                erro: 'Confirme seu e-mail antes de entrar. Consulte sua caixa de entrada ou solicite um novo link de confirmação.'
             });
         }
 
