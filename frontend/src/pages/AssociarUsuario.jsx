@@ -8,6 +8,8 @@ function AssociarUsuario() {
   const navigate = useNavigate()
 
   const [usuarios, setUsuarios] = useState([])
+  const [usuariosGerenciados, setUsuariosGerenciados] = useState([])
+  const [emailCandidato, setEmailCandidato] = useState('')
   const [usuarioId, setUsuarioId] = useState('')
   const [perfil, setPerfil] = useState('avaliador')
   const [perfilAtual, setPerfilAtual] = useState('')
@@ -18,6 +20,7 @@ function AssociarUsuario() {
   const [mensagemExclusao, setMensagemExclusao] = useState('')
   const [erroExclusao, setErroExclusao] = useState('')
   const [carregando, setCarregando] = useState(true)
+  const [buscandoCandidato, setBuscandoCandidato] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [usuariosExcluindo, setUsuariosExcluindo] = useState([])
   const exclusoesEmAndamento = useRef(new Set())
@@ -57,21 +60,25 @@ const [modoEdicao, setModoEdicao] = useState(false)
 
         setPerfilAtual(vinculo.perfil)
 
-        const respostaUsuarios = await fetch(`${API_URL}/usuarios`, {
-          headers: {
-            Authorization: `Bearer ${token}`
+        const respostaUsuariosGerenciados = await fetch(
+          `${API_URL}/usuarios/${contexto.instituicaoId}/gerenciar`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
           }
-        })
+        )
+        const dadosUsuariosGerenciados =
+          await respostaUsuariosGerenciados.json()
 
-        const dadosUsuarios = await respostaUsuarios.json()
-
-        if (!respostaUsuarios.ok) {
+        if (!respostaUsuariosGerenciados.ok) {
           throw new Error(
-            dadosUsuarios.erro || 'Não foi possível carregar os usuários.'
+            dadosUsuariosGerenciados.erro ||
+              'Não foi possível carregar os usuários desta instituição.'
           )
         }
 
-        setUsuarios(dadosUsuarios)
+        setUsuariosGerenciados(dadosUsuariosGerenciados)
 
         const respostaVinculos = await fetch(`${API_URL}/vinculos/${contexto.instituicaoId}`, {
   headers: {
@@ -102,30 +109,116 @@ setVinculos(dadosVinculos)
     buscarDados()
   }, [navigate])
 
-async function excluirUsuario(usuario) {
+async function buscarCandidato(event) {
+  event.preventDefault()
+  setMensagem('')
+  setErro('')
+
+  const email = emailCandidato.trim()
+
+  if (!email) {
+    setErro('Informe o e-mail da conta que deseja associar.')
+    return
+  }
+
+  const token = sessionStorage.getItem('token')
+
+  if (!token) {
+    setErro('Sua sessão expirou. Entre novamente para continuar.')
+    navigate('/login', { replace: true })
+    return
+  }
+
+  try {
+    setBuscandoCandidato(true)
+    setUsuarios([])
+    setUsuarioId('')
+    setVinculoId('')
+    setModoEdicao(false)
+
+    const resposta = await fetch(
+      `${API_URL}/usuarios/${instituicaoId}/candidatos`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ email })
+      }
+    )
+    const dados = await resposta.json()
+
+    if (!resposta.ok) {
+      if (resposta.status === 401) {
+        sessionStorage.removeItem('token')
+        navigate('/login', { replace: true })
+        return
+      }
+
+      throw new Error(
+        dados.erro || 'Não foi possível buscar uma conta com esse e-mail.'
+      )
+    }
+
+    setUsuarios([dados])
+    setUsuarioId(String(dados.id))
+
+    const vinculoExistente = vinculos.find(
+      (item) => Number(item.usuario_id) === Number(dados.id)
+    )
+
+    if (vinculoExistente && perfilAtual === 'admin') {
+      setVinculoId(String(vinculoExistente.id))
+      setModoEdicao(true)
+      setPerfil(vinculoExistente.perfil)
+    } else {
+      setVinculoId('')
+      setModoEdicao(false)
+      if (!vinculoExistente) {
+        setPerfil('avaliador')
+      }
+    }
+  } catch (error) {
+    setErro(
+      error instanceof TypeError
+        ? 'Não foi possível conectar à API.'
+        : error instanceof Error
+          ? error.message
+          : 'Não foi possível buscar uma conta.'
+    )
+  } finally {
+    setBuscandoCandidato(false)
+  }
+}
+
+async function excluirVinculo(usuario) {
+  const vinculoIdParaExcluir = Number(usuario.vinculo_id)
   const usuarioIdParaExcluir = Number(usuario.id)
 
   if (
     !['admin', 'coordenador'].includes(perfilAtual) ||
+    !Number.isSafeInteger(vinculoIdParaExcluir) ||
+    vinculoIdParaExcluir <= 0 ||
     !Number.isSafeInteger(usuarioIdParaExcluir) ||
     usuarioIdParaExcluir <= 0 ||
     idUsuarioAutenticado === null ||
     usuarioIdParaExcluir === idUsuarioAutenticado ||
-    exclusoesEmAndamento.current.has(usuarioIdParaExcluir)
+    exclusoesEmAndamento.current.has(vinculoIdParaExcluir)
   ) {
     return
   }
 
   const confirmado = window.confirm(
-    `Tem certeza de que deseja excluir ${usuario.nome}? Esta exclusão é permanente e pode ser impedida se houver vínculos ou registros relacionados. Esses registros não serão apagados automaticamente.`
+    `Remover ${usuario.nome} desta instituição? A conta global, o histórico acadêmico e os vínculos com outras instituições serão preservados.`
   )
 
   if (!confirmado) {
     return
   }
 
-  exclusoesEmAndamento.current.add(usuarioIdParaExcluir)
-  setUsuariosExcluindo((ids) => [...ids, usuarioIdParaExcluir])
+  exclusoesEmAndamento.current.add(vinculoIdParaExcluir)
+  setUsuariosExcluindo((ids) => [...ids, vinculoIdParaExcluir])
   setMensagemExclusao('')
   setErroExclusao('')
 
@@ -139,7 +232,7 @@ async function excluirUsuario(usuario) {
     }
 
     const resposta = await fetch(
-      `${API_URL}/usuarios/${usuarioIdParaExcluir}`,
+      `${API_URL}/vinculos/${instituicaoId}/${vinculoIdParaExcluir}`,
       {
         method: 'DELETE',
         headers: {
@@ -157,38 +250,41 @@ async function excluirUsuario(usuario) {
       }
 
       if (resposta.status === 400) {
-        throw new Error(dados.erro || 'O ID do usuário é inválido.')
+        throw new Error(dados.erro || 'O ID do vínculo é inválido.')
       }
 
       if (resposta.status === 403) {
         throw new Error(
-          dados.erro || 'Você não tem permissão para excluir este usuário.'
+          dados.erro || 'Você não tem permissão para remover este vínculo.'
         )
       }
 
       if (resposta.status === 404) {
-        throw new Error(dados.erro || 'Usuário não encontrado.')
+        throw new Error(dados.erro || 'Vínculo não encontrado nesta instituição.')
       }
 
       if (resposta.status === 409) {
-        throw new Error(
-          `${dados.erro || 'O usuário possui vínculos ou registros relacionados.'} Preserve esses registros ou resolva as relações antes de tentar excluir novamente.`
-        )
+        throw new Error(dados.erro || 'Não foi possível remover este vínculo.')
       }
 
       if (resposta.status === 500) {
         throw new Error(
-          dados.erro || 'O servidor não conseguiu excluir o usuário.'
+          dados.erro || 'O servidor não conseguiu remover o vínculo.'
         )
       }
 
       throw new Error(
-        dados.erro || 'Não foi possível excluir o usuário.'
+        dados.erro || 'Não foi possível remover o vínculo.'
       )
     }
 
-    setUsuarios((lista) =>
-      lista.filter((item) => Number(item.id) !== usuarioIdParaExcluir)
+    setUsuariosGerenciados((lista) =>
+      lista.filter(
+        (item) => Number(item.vinculo_id) !== vinculoIdParaExcluir
+      )
+    )
+    setVinculos((lista) =>
+      lista.filter((item) => Number(item.id) !== vinculoIdParaExcluir)
     )
 
     if (Number(usuarioId) === usuarioIdParaExcluir) {
@@ -199,7 +295,8 @@ async function excluirUsuario(usuario) {
     }
 
     setMensagemExclusao(
-      dados.mensagem || `Usuário ${usuario.nome} excluído com sucesso.`
+      dados.mensagem ||
+        `O vínculo de ${usuario.nome} com esta instituição foi removido. A conta e o histórico foram preservados.`
     )
   } catch (error) {
     setErroExclusao(
@@ -207,12 +304,12 @@ async function excluirUsuario(usuario) {
         ? 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
         : error instanceof Error
           ? error.message
-          : 'Não foi possível excluir o usuário.'
+          : 'Não foi possível remover o vínculo.'
     )
   } finally {
-    exclusoesEmAndamento.current.delete(usuarioIdParaExcluir)
+    exclusoesEmAndamento.current.delete(vinculoIdParaExcluir)
     setUsuariosExcluindo((ids) =>
-      ids.filter((id) => id !== usuarioIdParaExcluir)
+      ids.filter((id) => id !== vinculoIdParaExcluir)
     )
   }
 }
@@ -224,6 +321,15 @@ async function associarUsuario(event) {
 
   if (!usuarioId || !perfil) {
     setErro('Selecione um usuário e um perfil.')
+    return
+  }
+
+  const vinculoExistente = vinculos.some(
+    (item) => Number(item.usuario_id) === Number(usuarioId)
+  )
+
+  if (vinculoExistente && perfilAtual !== 'admin') {
+    setErro('Somente administradores podem atualizar o perfil de um vínculo existente.')
     return
   }
 
@@ -288,6 +394,8 @@ async function associarUsuario(event) {
       )
     }
 
+    setUsuarios([])
+    setEmailCandidato('')
     setUsuarioId('')
     setVinculoId('')
     setModoEdicao(false)
@@ -365,77 +473,115 @@ async function associarUsuario(event) {
           {carregando ? (
             <p>Carregando usuários...</p>
           ) : (
-            <form onSubmit={associarUsuario}>
-              <div className="campo-associar">
-                <label htmlFor="usuarioId">Usuário</label>
-
-<select
-  id="usuarioId"
-  value={usuarioId}
-  onChange={(event) => {
-    const idSelecionado = event.target.value
-    setUsuarioId(idSelecionado)
-
-    const vinculoExistente = vinculos.find(
-      (item) => Number(item.usuario_id) === Number(idSelecionado)
-    )
-
-    if (vinculoExistente) {
-      setVinculoId(String(vinculoExistente.id))
-      setModoEdicao(true)
-      setPerfil(vinculoExistente.perfil)
-    } else {
-      setVinculoId('')
-      setModoEdicao(false)
-      setPerfil('avaliador')
-    }
-  }}
-  required
->
-  <option value="">Selecione um usuário</option>
-
-  {usuarios.map((usuario) => (
-    <option key={usuario.id} value={usuario.id}>
-      {usuario.nome} — {usuario.email}
-    </option>
-  ))}
-</select>
-                {usuarios.length === 0 && (
-                  <small>
-                    Não há contas disponíveis para associar.
-                  </small>
-                )}
-              </div>
-
-              <div className="campo-associar">
-                <label htmlFor="perfil">Perfil institucional</label>
-
-                <select
-                  id="perfil"
-                  value={perfil}
-                  onChange={(event) => setPerfil(event.target.value)}
-                  required
-                >
-                  {perfisDisponiveis.map((item) => (
-                    <option key={item.valor} value={item.valor}>
-                      {item.texto}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <>
+              <form onSubmit={buscarCandidato}>
+                <div className="campo-associar">
+                  <label htmlFor="emailCandidato">
+                    Buscar conta pelo e-mail
+                  </label>
+                  <input
+                    id="emailCandidato"
+                    type="email"
+                    value={emailCandidato}
+                    onChange={(event) =>
+                      setEmailCandidato(event.target.value)
+                    }
+                    autoComplete="email"
+                    maxLength={255}
+                    required
+                  />
+                </div>
 
                 <button
-                type="submit"
-                className="botao-confirmar-associacao"
-                disabled={enviando || usuarios.length === 0}
+                  type="submit"
+                  className="botao-confirmar-associacao"
+                  disabled={buscandoCandidato}
                 >
-                {enviando
-                    ? 'Salvando...'
-                    : modoEdicao
-                    ? 'Atualizar perfil'
-                    : 'Associar usuário'}
+                  {buscandoCandidato ? 'Buscando...' : 'Buscar conta'}
                 </button>
-            </form>
+              </form>
+
+              {usuarios.length === 0 ? (
+                <small>
+                  Informe o e-mail de uma conta existente para associar ou
+                  atualizar o perfil institucional.
+                </small>
+              ) : perfilAtual !== 'admin' &&
+                vinculos.some(
+                  (item) => Number(item.usuario_id) === Number(usuarioId)
+                ) ? (
+                <p role="status">
+                  Esta conta já possui vínculo com a instituição. Somente
+                  administradores podem atualizar o perfil.
+                </p>
+              ) : (
+                <form onSubmit={associarUsuario}>
+                  <div className="campo-associar">
+                    <label htmlFor="usuarioId">Usuário</label>
+                    <select
+                      id="usuarioId"
+                      value={usuarioId}
+                      onChange={(event) => {
+                        const idSelecionado = event.target.value
+                        setUsuarioId(idSelecionado)
+
+                        const vinculoExistente = vinculos.find(
+                          (item) =>
+                            Number(item.usuario_id) ===
+                            Number(idSelecionado)
+                        )
+
+                        if (vinculoExistente) {
+                          setVinculoId(String(vinculoExistente.id))
+                          setModoEdicao(true)
+                          setPerfil(vinculoExistente.perfil)
+                        } else {
+                          setVinculoId('')
+                          setModoEdicao(false)
+                          setPerfil('avaliador')
+                        }
+                      }}
+                      required
+                    >
+                      <option value="">Selecione um usuário</option>
+                      {usuarios.map((usuario) => (
+                        <option key={usuario.id} value={usuario.id}>
+                          {usuario.nome} — {usuario.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="campo-associar">
+                    <label htmlFor="perfil">Perfil institucional</label>
+                    <select
+                      id="perfil"
+                      value={perfil}
+                      onChange={(event) => setPerfil(event.target.value)}
+                      required
+                    >
+                      {perfisDisponiveis.map((item) => (
+                        <option key={item.valor} value={item.valor}>
+                          {item.texto}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="botao-confirmar-associacao"
+                    disabled={enviando || usuarios.length === 0}
+                  >
+                    {enviando
+                      ? 'Salvando...'
+                      : modoEdicao
+                        ? 'Atualizar perfil'
+                        : 'Associar usuário'}
+                  </button>
+                </form>
+              )}
+            </>
           )}
         </section>
 
@@ -443,8 +589,8 @@ async function associarUsuario(event) {
           <section className="cartao-gerenciar-usuarios">
             <h2>Gerenciar usuários</h2>
             <p>
-              Exclua contas somente quando não houver vínculos ou
-              registros relacionados.
+              Remova o vínculo com esta instituição. A conta global e o
+              histórico acadêmico serão preservados.
             </p>
 
             {mensagemExclusao && (
@@ -461,17 +607,20 @@ async function associarUsuario(event) {
 
             {carregando ? (
               <p role="status">Carregando lista de usuários...</p>
-            ) : usuarios.length === 0 ? (
-              <p role="status">Não há usuários cadastrados.</p>
+            ) : usuariosGerenciados.length === 0 ? (
+              <p role="status">
+                Não há usuários com vínculo aprovado nesta instituição.
+              </p>
             ) : (
               <ul className="lista-gerenciar-usuarios">
-                {usuarios.map((usuario) => {
+                {usuariosGerenciados.map((usuario) => {
                   const usuarioIdAtual = Number(usuario.id)
+                  const vinculoIdAtual = Number(usuario.vinculo_id)
                   const ehContaAtual =
                     idUsuarioAutenticado !== null &&
                     usuarioIdAtual === idUsuarioAutenticado
                   const excluindo =
-                    usuariosExcluindo.includes(usuarioIdAtual)
+                    usuariosExcluindo.includes(vinculoIdAtual)
 
                   return (
                     <li
@@ -491,11 +640,11 @@ async function associarUsuario(event) {
                         <button
                           className="botao-excluir-usuario"
                           type="button"
-                          aria-label={`Excluir usuário ${usuario.nome}`}
-                          onClick={() => excluirUsuario(usuario)}
+                          aria-label={`Remover vínculo de ${usuario.nome}`}
+                          onClick={() => excluirVinculo(usuario)}
                           disabled={excluindo}
                         >
-                          {excluindo ? 'Excluindo...' : 'Excluir'}
+                          {excluindo ? 'Removendo...' : 'Remover vínculo'}
                         </button>
                       ) : null}
                     </li>

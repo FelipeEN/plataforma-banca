@@ -6,13 +6,19 @@ function autorizarPerfil(...perfisPermitidos) {
             });
         }
 
-        const instituicaoId = Number(req.params.instituicaoId);
+        const instituicaoIdTexto = req.params.instituicaoId;
 
-        if (!Number.isInteger(instituicaoId) || instituicaoId <= 0) {
+        if (
+            !/^[0-9]+$/.test(instituicaoIdTexto || '') ||
+            !Number.isSafeInteger(Number(instituicaoIdTexto)) ||
+            Number(instituicaoIdTexto) <= 0
+        ) {
             return res.status(400).json({
                 erro: 'ID da instituição inválido.'
             });
         }
+
+        const instituicaoId = Number(instituicaoIdTexto);
         
         const vinculo = req.usuario.vinculos.find(
             (v) => Number(v.instituicao_id) === instituicaoId

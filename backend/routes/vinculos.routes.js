@@ -59,7 +59,7 @@ router.post('/', autenticarToken, async (req, res) => {
 router.get(
     '/:instituicaoId',
     autenticarToken,
-   autorizarPerfil('admin'),
+    autorizarPerfil('admin', 'coordenador'),
     async (req, res) => {
         try {
             const instituicaoId = req.usuario.instituicaoId;
@@ -90,6 +90,142 @@ router.get(
             return res.status(500).json({
                 erro: 'Erro interno ao listar vínculos.'
             });
+        }
+    }
+);
+
+router.delete(
+    '/:instituicaoId/:vinculoId',
+    autenticarToken,
+    autorizarPerfil('admin', 'coordenador'),
+    async (req, res) => {
+        const vinculoIdTexto = req.params.vinculoId;
+
+        if (!/^[0-9]+$/.test(vinculoIdTexto)) {
+            return res.status(400).json({
+                erro: 'ID do vínculo inválido.'
+            });
+        }
+
+        const vinculoId = Number(vinculoIdTexto);
+
+        if (!Number.isSafeInteger(vinculoId) || vinculoId <= 0) {
+            return res.status(400).json({
+                erro: 'ID do vínculo inválido.'
+            });
+        }
+
+        const instituicaoId = req.usuario.instituicaoId;
+        let cliente;
+        let transacaoIniciada = false;
+        let erroLiberacao;
+
+        try {
+            cliente = await pool.connect();
+            await cliente.query('BEGIN');
+            transacaoIniciada = true;
+
+            const resultadoAutorizador = await cliente.query(
+                `SELECT id, perfil
+                 FROM vinculos_institucionais
+                 WHERE usuario_id = $1
+                   AND instituicao_id = $2
+                   AND status = 'aprovado'
+                   AND perfil = ANY($3)
+                 FOR UPDATE`,
+                [req.usuario.id, instituicaoId, ['admin', 'coordenador']]
+            );
+
+            if (resultadoAutorizador.rows.length === 0) {
+                await cliente.query('ROLLBACK');
+                transacaoIniciada = false;
+                return res.status(403).json({
+                    erro: 'Você não tem mais permissão para remover vínculos nesta instituição.'
+                });
+            }
+
+            const vinculoAutorizador = resultadoAutorizador.rows[0];
+
+            const resultadoVinculo = await cliente.query(
+                `SELECT id, usuario_id, perfil, status
+                 FROM vinculos_institucionais
+                 WHERE id = $1
+                   AND instituicao_id = $2
+                   AND status = 'aprovado'
+                 FOR UPDATE`,
+                [vinculoId, instituicaoId]
+            );
+
+            if (resultadoVinculo.rows.length === 0) {
+                await cliente.query('ROLLBACK');
+                transacaoIniciada = false;
+                return res.status(404).json({
+                    erro: 'Vínculo não encontrado nesta instituição.'
+                });
+            }
+
+            const vinculo = resultadoVinculo.rows[0];
+
+            if (Number(vinculo.usuario_id) === Number(req.usuario.id)) {
+                await cliente.query('ROLLBACK');
+                transacaoIniciada = false;
+                return res.status(403).json({
+                    erro: 'Você não pode remover seu próprio vínculo administrativo.'
+                });
+            }
+
+            if (
+                vinculoAutorizador.perfil === 'coordenador' &&
+                vinculo.perfil === 'admin'
+            ) {
+                await cliente.query('ROLLBACK');
+                transacaoIniciada = false;
+                return res.status(403).json({
+                    erro: 'Coordenadores não podem remover vínculos de administradores.'
+                });
+            }
+
+            await cliente.query(
+                `DELETE FROM vinculos_institucionais
+                 WHERE id = $1
+                   AND instituicao_id = $2`,
+                [vinculoId, instituicaoId]
+            );
+
+            await cliente.query('COMMIT');
+            transacaoIniciada = false;
+
+            return res.status(200).json({
+                mensagem: 'Vínculo removido. A conta global e o histórico acadêmico foram preservados.'
+            });
+        } catch (erro) {
+            if (cliente && transacaoIniciada) {
+                try {
+                    await cliente.query('ROLLBACK');
+                } catch (erroRollback) {
+                    erroLiberacao = erroRollback;
+                    console.error(
+                        'Erro ao reverter a remoção do vínculo:',
+                        erroRollback.message
+                    );
+                }
+            }
+
+            if (erro.code === '23503') {
+                return res.status(409).json({
+                    erro: 'Não foi possível remover este vínculo devido a uma relação de dados existente.'
+                });
+            }
+
+            console.error('Erro ao remover vínculo institucional:', erro.message);
+
+            return res.status(500).json({
+                erro: 'Erro interno ao remover o vínculo institucional.'
+            });
+        } finally {
+            if (cliente) {
+                cliente.release(erroLiberacao);
+            }
         }
     }
 );

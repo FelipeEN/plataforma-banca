@@ -50,78 +50,87 @@ router.post('/',   autenticarToken,autorizarPerfilGlobal('admin', 'coordenador')
     }
 });
 
-router.get('/',     autenticarToken,autorizarPerfilGlobal('admin', 'coordenador'), async (req, res) => {
-    try {
-        const resultado = await pool.query(
-            `SELECT id, nome, email, criado_em
-             FROM usuarios
-             ORDER BY id`
-        );
-
-        return res.json(resultado.rows);
-
-    } catch (erro) {
-        console.error('Erro ao buscar usuários:', erro.message);
-
-        return res.status(500).json({
-            erro: 'Erro interno ao buscar usuários.'
-        });
-    }
-});
-
-router.delete(
-    '/:usuarioId',
+router.get(
+    '/:instituicaoId/gerenciar',
     autenticarToken,
-    autorizarPerfilGlobal('admin', 'coordenador'),
+    autorizarPerfil('admin', 'coordenador'),
     async (req, res) => {
-        const usuarioIdTexto = req.params.usuarioId;
+        try {
+            const resultado = await pool.query(
+                `SELECT id, nome, email, criado_em, vinculo_id
+                 FROM (
+                    SELECT DISTINCT ON (u.id)
+                        u.id,
+                        u.nome,
+                        u.email,
+                        u.criado_em,
+                        v.id AS vinculo_id
+                    FROM usuarios u
+                    JOIN vinculos_institucionais v
+                      ON v.usuario_id = u.id
+                    WHERE v.instituicao_id = $1
+                      AND v.status = 'aprovado'
+                    ORDER BY u.id, v.id
+                 ) usuarios_aprovados
+                 ORDER BY nome, id`,
+                [req.usuario.instituicaoId]
+            );
 
-        if (!/^[0-9]+$/.test(usuarioIdTexto)) {
-            return res.status(400).json({
-                erro: 'ID do usuário inválido.'
+            return res.json(resultado.rows);
+        } catch (erro) {
+            console.error('Erro ao buscar usuários da instituição:', erro.message);
+
+            return res.status(500).json({
+                erro: 'Erro interno ao buscar usuários da instituição.'
             });
         }
+    }
+);
 
-        const usuarioId = Number(usuarioIdTexto);
+router.post(
+    '/:instituicaoId/candidatos',
+    autenticarToken,
+    autorizarPerfil('admin', 'coordenador'),
+    async (req, res) => {
+        const email = req.body?.email;
 
-        if (!Number.isSafeInteger(usuarioId) || usuarioId <= 0) {
+        if (
+            typeof email !== 'string' ||
+            email.trim() === '' ||
+            email.trim().length > 255
+        ) {
             return res.status(400).json({
-                erro: 'ID do usuário inválido.'
-            });
-        }
-
-        if (usuarioId === Number(req.usuario.id)) {
-            return res.status(403).json({
-                erro: 'Você não pode excluir sua própria conta.'
+                erro: 'Informe um e-mail válido para buscar a conta.'
             });
         }
 
         try {
             const resultado = await pool.query(
-                'DELETE FROM usuarios WHERE id = $1',
-                [usuarioId]
+                `SELECT u.id, u.nome, u.email
+                 FROM usuarios u
+                 WHERE LOWER(u.email) = LOWER($1)
+                   AND NOT EXISTS (
+                       SELECT 1
+                       FROM vinculos_institucionais v
+                       WHERE v.usuario_id = u.id
+                         AND v.instituicao_id = $2
+                         AND v.status <> 'aprovado'
+                   )`,
+                [email.trim(), req.usuario.instituicaoId]
             );
 
-            if (resultado.rowCount === 0) {
+            if (resultado.rows.length === 0) {
                 return res.status(404).json({
-                    erro: 'Usuário não encontrado.'
+                    erro: 'Nenhuma conta disponível para associação ou atualização foi encontrada com esse e-mail.'
                 });
             }
 
-            return res.status(200).json({
-                mensagem: 'Usuário excluído com sucesso.'
-            });
+            return res.json(resultado.rows[0]);
         } catch (erro) {
-            if (erro.code === '23503') {
-                return res.status(409).json({
-                    erro: 'Este usuário possui vínculos ou registros relacionados e não pode ser excluído.'
-                });
-            }
-
-            console.error('Erro ao excluir usuário:', erro.message);
+            console.error('Erro ao buscar candidato para associação:', erro.message);
 
             return res.status(500).json({
-                erro: 'Erro interno ao excluir usuário.'
+                erro: 'Erro interno ao buscar candidato para associação.'
             });
         }
     }

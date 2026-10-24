@@ -18,6 +18,21 @@ async function autenticarToken(req, res, next) {
             process.env.JWT_SECRET
         );
 
+        const instituicaoSolicitada = req.params.instituicaoId;
+
+        if (
+            instituicaoSolicitada !== undefined &&
+            (
+                !/^[0-9]+$/.test(instituicaoSolicitada) ||
+                !Number.isSafeInteger(Number(instituicaoSolicitada)) ||
+                Number(instituicaoSolicitada) <= 0
+            )
+        ) {
+            return res.status(400).json({
+                erro: 'ID da instituição inválido.'
+            });
+        }
+
         const usuarioId = Number(dadosUsuario.sub);
 
         const resultado = await pool.query(
@@ -42,8 +57,6 @@ async function autenticarToken(req, res, next) {
 
         // Se a rota informar uma instituição, usa o vínculo
         // correspondente a ela.
-        const instituicaoSolicitada = req.params.instituicaoId;
-
         let vinculoAtivo;
 
         if (instituicaoSolicitada !== undefined) {
