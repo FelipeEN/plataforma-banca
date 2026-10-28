@@ -17,6 +17,7 @@ function Ranking() {
     const [erroInstituicao, setErroInstituicao] = useState('')
     const [erroExportacao, setErroExportacao] = useState('')
     const [erroAudio, setErroAudio] = useState('')
+    const [listaCompletaVisivel, setListaCompletaVisivel] = useState(false)
     const [estadoPremiacao, setEstadoPremiacao] = useState('pronta')
     const movimentoReduzido = useRef(
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -666,7 +667,27 @@ function Ranking() {
                                     </section>
                                 )}
 
-                                <div className="tabela-responsiva">
+                                <div className="controles-lista-ranking">
+                                    <button
+                                        className="botao-exportar-ranking"
+                                        type="button"
+                                        aria-expanded={listaCompletaVisivel}
+                                        aria-controls="tabela-ranking-completo"
+                                        onClick={() =>
+                                            setListaCompletaVisivel((visivel) => !visivel)
+                                        }
+                                    >
+                                        {listaCompletaVisivel
+                                            ? 'Ocultar lista completa'
+                                            : 'Mostrar lista completa'}
+                                    </button>
+                                </div>
+
+                                <div
+                                    className="tabela-responsiva"
+                                    id="tabela-ranking-completo"
+                                    hidden={!listaCompletaVisivel}
+                                >
                                     <table>
                                         <thead>
                                             <tr>
