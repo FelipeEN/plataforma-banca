@@ -37,6 +37,26 @@ function DetalhesBanca() {
     const [erroAvaliadores, setErroAvaliadores] = useState('')
     const [avaliadorSelecionado, setAvaliadorSelecionado] = useState('')
     const [associandoAvaliador, setAssociandoAvaliador] = useState(false)
+    const [feedbackLinkAvaliacao, setFeedbackLinkAvaliacao] = useState(null)
+
+    async function copiarLinkAvaliacao(projetoId) {
+        const link = `${window.location.origin}/bancas/${bancaId}/projetos/${projetoId}/avaliar`
+
+        try {
+            await navigator.clipboard.writeText(link)
+            setFeedbackLinkAvaliacao({
+                projetoId,
+                tipo: 'sucesso',
+                texto: 'Link de avaliação copiado. Você já pode enviá-lo ao avaliador.'
+            })
+        } catch {
+            setFeedbackLinkAvaliacao({
+                projetoId,
+                tipo: 'erro',
+                texto: 'Não foi possível copiar o link. Verifique a permissão de área de transferência do navegador.'
+            })
+        }
+    }
 
     async function adicionarProjeto() {
     if (!projetoSelecionado) {
@@ -626,6 +646,26 @@ setProjetosDisponiveis(
                         >
                             Avaliar projeto →
                         </button>
+
+                        {perfilUsuario === 'admin' && (
+                            <>
+                                <button
+                                    className="botao-detalhes-projeto"
+                                    type="button"
+                                    onClick={() => copiarLinkAvaliacao(projeto.id)}
+                                >
+                                    Copiar link de avaliação
+                                </button>
+                                {feedbackLinkAvaliacao?.projetoId === projeto.id && (
+                                    <p
+                                        className={feedbackLinkAvaliacao.tipo === 'erro' ? 'mensagem-erro' : ''}
+                                        role={feedbackLinkAvaliacao.tipo === 'erro' ? 'alert' : 'status'}
+                                    >
+                                        {feedbackLinkAvaliacao.texto}
+                                    </p>
+                                )}
+                            </>
+                        )}
 
                         <button
                                 className="botao-detalhes-projeto"

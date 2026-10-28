@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Projetos from './pages/Projetos.jsx'
@@ -19,6 +19,8 @@ import CadastrarInstituicao from './pages/CadastrarInstituicao.jsx'
 
 
 function App() {
+  const location = useLocation()
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -75,7 +77,11 @@ function App() {
           element={
               sessionStorage.getItem('token')
                   ? <AvaliarProjeto />
-                  : <Navigate to="/login" replace />
+                      : <Navigate
+                          to="/login"
+                          state={{ from: location }}
+                          replace
+                        />
           }
       />
 

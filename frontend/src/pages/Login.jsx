@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './Login.css'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import API_URL from '../api.js'
 
 
@@ -14,6 +14,7 @@ const [mensagem, setMensagem] = useState('')
 const [carregando, setCarregando] = useState(false)
 
 const navigate = useNavigate()
+const location = useLocation()
 
 async function fazerLogin(event) {
   event.preventDefault()
@@ -44,7 +45,15 @@ async function fazerLogin(event) {
 
   sessionStorage.setItem('token', dados.token)
 
-  navigate('/dashboard')
+  const destino = location.state?.from
+  const caminhoInterno =
+    typeof destino?.pathname === 'string' &&
+    destino.pathname.startsWith('/') &&
+    !destino.pathname.startsWith('//')
+      ? `${destino.pathname}${destino.search || ''}${destino.hash || ''}`
+      : '/dashboard'
+
+  navigate(caminhoInterno, { replace: true })
   } catch (erro) {
     console.error('Erro ao conectar com a API:', erro)
     setMensagem('Não foi possível conectar ao servidor.')

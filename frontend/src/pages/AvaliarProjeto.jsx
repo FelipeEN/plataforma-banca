@@ -42,7 +42,11 @@ const totalCriterios = criterios.length
         async function carregarDados() {
             try {
                 const token = sessionStorage.getItem('token')
-                const { instituicaoId } = await buscarContextoInstituicao(token)
+                const { instituicaoId, vinculo } = await buscarContextoInstituicao(token)
+
+                if (vinculo.perfil !== 'avaliador') {
+                    throw new Error('Apenas avaliadores associados à banca podem acessar esta avaliação.')
+                }
 
                 const respostaBanca = await fetch(
                     `${API_URL}/bancas/${instituicaoId}/${bancaId}/projetos`,
@@ -194,6 +198,19 @@ async function enviarAvaliacao() {
         return <main className="pagina-projetos"><p>Carregando avaliação...</p></main>
     }
 
+    if (erro) {
+        return (
+            <main className="pagina-projetos pagina-avaliar">
+                <button
+                    className="botao-voltar"
+                    onClick={() => navigate(`/bancas/${bancaId}`)}
+                >
+                    ← Voltar à banca
+                </button>
+                <p className="mensagem-erro" role="alert">{erro}</p>
+            </main>
+        )
+    }
 
 
     return (
