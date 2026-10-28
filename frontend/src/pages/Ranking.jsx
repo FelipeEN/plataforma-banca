@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { buscarContextoInstituicao } from '../utils/instituicao'
 import API_URL from '../api.js'
@@ -16,6 +16,73 @@ function Ranking() {
     const [erro, setErro] = useState('')
     const [erroInstituicao, setErroInstituicao] = useState('')
     const [erroExportacao, setErroExportacao] = useState('')
+    const [estadoPremiacao, setEstadoPremiacao] = useState('pronta')
+    const [movimentoReduzido, setMovimentoReduzido] = useState(
+        () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+    const temporizadoresPremiacao = useRef([])
+
+    function limparTemporizadoresPremiacao() {
+        temporizadoresPremiacao.current.forEach((temporizador) => {
+            window.clearTimeout(temporizador)
+        })
+        temporizadoresPremiacao.current = []
+    }
+
+    function iniciarPremiacao() {
+        limparTemporizadoresPremiacao()
+
+        if (movimentoReduzido) {
+            setEstadoPremiacao('concluida')
+            return
+        }
+
+        setEstadoPremiacao('bronze')
+        temporizadoresPremiacao.current = [
+            window.setTimeout(() => setEstadoPremiacao('prata'), 1800),
+            window.setTimeout(() => setEstadoPremiacao('ouro'), 3900),
+            window.setTimeout(() => {
+                temporizadoresPremiacao.current = []
+                setEstadoPremiacao('concluida')
+            }, 5600)
+        ]
+    }
+
+    function interromperPremiacao() {
+        limparTemporizadoresPremiacao()
+        setEstadoPremiacao('interrompida')
+    }
+
+    useEffect(() => {
+        const preferenciaMovimento = window.matchMedia(
+            '(prefers-reduced-motion: reduce)'
+        )
+
+        function atualizarPreferencia(evento) {
+            setMovimentoReduzido(evento.matches)
+
+            if (evento.matches && temporizadoresPremiacao.current.length > 0) {
+                temporizadoresPremiacao.current.forEach((temporizador) => {
+                    window.clearTimeout(temporizador)
+                })
+                temporizadoresPremiacao.current = []
+                setEstadoPremiacao('concluida')
+            }
+        }
+
+        preferenciaMovimento.addEventListener('change', atualizarPreferencia)
+
+        return () => {
+            preferenciaMovimento.removeEventListener(
+                'change',
+                atualizarPreferencia
+            )
+            temporizadoresPremiacao.current.forEach((temporizador) => {
+                window.clearTimeout(temporizador)
+            })
+            temporizadoresPremiacao.current = []
+        }
+    }, [])
 
     useEffect(() => {
         async function buscarRanking() {
@@ -296,6 +363,31 @@ function Ranking() {
         }))
         .filter((colocacao) => colocacao.projetos.length > 0)
 
+    function lugarRevelado(posicao) {
+        if (estadoPremiacao === 'concluida') {
+            return true
+        }
+
+        if (posicao === 3) {
+            return estadoPremiacao === 'bronze' ||
+                estadoPremiacao === 'prata' ||
+                estadoPremiacao === 'ouro'
+        }
+
+        if (posicao === 2) {
+            return estadoPremiacao === 'prata' ||
+                estadoPremiacao === 'ouro'
+        }
+
+        return posicao === 1 && estadoPremiacao === 'ouro'
+    }
+
+    const premiacaoEmAndamento = [
+        'bronze',
+        'prata',
+        'ouro'
+    ].includes(estadoPremiacao)
+
     return (
         <main className="pagina-projetos pagina-ranking">
             <button
@@ -380,10 +472,55 @@ function Ranking() {
                                         aria-label="Pódio dos projetos classificados"
                                     >
                                         <h3>Projetos em destaque</h3>
+                                        <div className="podio-ranking-controles">
+                                            {estadoPremiacao === 'pronta' && (
+                                                <button
+                                                    className="botao-iniciar-premiacao"
+                                                    type="button"
+                                                    onClick={iniciarPremiacao}
+                                                >
+                                                    Iniciar premiação
+                                                </button>
+                                            )}
+                                            {premiacaoEmAndamento && (
+                                                <button
+                                                    className="botao-interromper-premiacao"
+                                                    type="button"
+                                                    onClick={interromperPremiacao}
+                                                >
+                                                    Interromper
+                                                </button>
+                                            )}
+                                            {[
+                                                'concluida',
+                                                'interrompida'
+                                            ].includes(estadoPremiacao) && (
+                                                <button
+                                                    className="botao-iniciar-premiacao"
+                                                    type="button"
+                                                    onClick={iniciarPremiacao}
+                                                >
+                                                    Repetir
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p
+                                            className="podio-ranking-status"
+                                            role="status"
+                                            aria-live="polite"
+                                        >
+                                            {estadoPremiacao === 'bronze' && '3º lugar — Bronze'}
+                                            {estadoPremiacao === 'prata' && '2º lugar — Prata'}
+                                            {estadoPremiacao === 'ouro' && '1º lugar — Ouro'}
+                                            {estadoPremiacao === 'concluida' && 'Premiação concluída'}
+                                            {estadoPremiacao === 'interrompida' && 'Premiação interrompida'}
+                                            {estadoPremiacao === 'pronta' && 'Inicie a cerimônia para revelar o pódio.'}
+                                        </p>
                                         <div className="podio-ranking-lugares">
                                             {colocacoesPodio.map((colocacao) => (
                                                 <article
-                                                    className={`podio-ranking-lugar podio-ranking-lugar-${colocacao.posicao}`}
+                                                    className={`podio-ranking-lugar podio-ranking-lugar-${colocacao.posicao}${lugarRevelado(colocacao.posicao) ? ' podio-ranking-lugar-revelado' : ''}`}
+                                                    aria-hidden={!lugarRevelado(colocacao.posicao)}
                                                     key={colocacao.posicao}
                                                 >
                                                     <span className="podio-ranking-medalha" aria-hidden="true">
