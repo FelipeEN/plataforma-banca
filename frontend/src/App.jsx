@@ -12,7 +12,6 @@ import AssociarUsuario from './pages/AssociarUsuario.jsx'
 import ConsultaAvaliacoes from './pages/ConsultaAvaliacoes.jsx'
 import CriarUsuario from './pages/CriarUsuario.jsx'
 import CadastroPublico from './pages/CadastroPublico.jsx'
-import ConfirmarEmail from './pages/ConfirmarEmail.jsx'
 import ResultadoAluno from './pages/ResultadoAluno.jsx'
 import CadastrarInstituicao from './pages/CadastrarInstituicao.jsx'
 
@@ -24,7 +23,6 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/cadastro" element={<CadastroPublico />} />
-      <Route path="/confirmar-email" element={<ConfirmarEmail />} />
 
       <Route
         path="/dashboard"

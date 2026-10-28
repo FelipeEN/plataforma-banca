@@ -39,7 +39,10 @@ export async function buscarContextoInstituicao(token) {
     ) || vinculosAprovados[0]
 
   if (!vinculoAtivo) {
-    throw new Error('Você não possui vínculo aprovado com uma instituição.')
+    const erro = new Error('Você não possui vínculo aprovado com uma instituição.')
+    erro.code = 'VINCULO_APROVADO_AUSENTE'
+    erro.usuario = usuario
+    throw erro
   }
 
   const instituicaoId = Number(vinculoAtivo.instituicao_id)

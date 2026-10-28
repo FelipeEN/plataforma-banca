@@ -114,8 +114,8 @@ function CadastroPublico() {
               <div>
                 <p>{mensagem}</p>
                 <p>
-                  Já solicitou um link?{' '}
-                  <Link to="/confirmar-email">Reenviar confirmação</Link>
+                  Você já pode entrar com sua senha. Os recursos institucionais
+                  ficam disponíveis após um administrador aprovar seu vínculo.
                 </p>
               </div>
             </div>

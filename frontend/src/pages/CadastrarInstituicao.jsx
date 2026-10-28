@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import './CadastrarInstituicao.css'
 import API_URL from '../api.js'
 
 function CadastrarInstituicao() {
-  const navigate = useNavigate()
-
   const [nomeInstituicao, setNomeInstituicao] = useState('')
   const [nomeResponsavel, setNomeResponsavel] = useState('')
   const [email, setEmail] = useState('')
@@ -51,7 +49,7 @@ async function cadastrarInstituicao(event) {
       return
     }
 
-    setMensagem('Instituição cadastrada com sucesso! Você já pode entrar.')
+    setMensagem(dados.mensagem)
 
     setNomeInstituicao('')
     setNomeResponsavel('')
@@ -90,7 +88,10 @@ async function cadastrarInstituicao(event) {
           <div>
             <span>CADASTRO INSTITUCIONAL</span>
             <h2>Cadastre sua instituição</h2>
-            <p>Você poderá administrar a instituição após concluir o cadastro.</p>
+            <p>
+              A solicitação será analisada. O acesso administrativo depende
+              da aprovação da instituição e do vínculo do responsável.
+            </p>
           </div>
 
           <label htmlFor="nomeInstituicao">Nome da instituição</label>

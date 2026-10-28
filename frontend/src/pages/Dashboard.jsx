@@ -12,10 +12,11 @@ function Dashboard() {
 
 const navigate = useNavigate()
 const [meusProjetos, setMeusProjetos] = useState([])
-const [erroProjetosAluno, setErroProjetosAluno] = useState('')
+const [erroCarregamento, setErroCarregamento] = useState('')
 const [usuario, setUsuario] = useState(null)
 const [instituicaoId, setInstituicaoId] = useState(null)
 const [carregando, setCarregando] = useState(true)
+const [semVinculoAprovado, setSemVinculoAprovado] = useState(false)
 
 const perfilUsuario = usuario?.vinculos?.find(
     (vinculo) =>
@@ -26,7 +27,7 @@ const perfilUsuario = usuario?.vinculos?.find(
 const [totalProjetos, setTotalProjetos] = useState(0)
 const [totalBancas, setTotalBancas] = useState(0)
 
-const [totalAvaliacoes, setTotalAvaliacoes] = useState(0)
+const [_totalAvaliacoes, setTotalAvaliacoes] = useState(0)
 const [totalProjetosRanqueados, setTotalProjetosRanqueados] = useState(0)
 useEffect(() => {
     async function buscarUsuario() {
@@ -148,9 +149,17 @@ const respostaRanking = await fetch(
 
             
         } catch (erro) {
+            if (erro.code === 'VINCULO_APROVADO_AUSENTE') {
+                setUsuario(erro.usuario)
+                setSemVinculoAprovado(true)
+                return
+            }
+
             console.error('Erro ao buscar usuário:', erro)
 
-            setErroProjetosAluno(erro.message)
+            setErroCarregamento(
+                'Não foi possível carregar os dados do painel. Tente novamente.'
+            )
         } finally {
             setCarregando(false)
         }
@@ -299,6 +308,26 @@ function sair() {
           <div className="ilustracao">🎓</div>
         </section>
 
+        {erroCarregamento && (
+          <p role="alert" className="erro-dashboard">
+            {erroCarregamento}
+          </p>
+        )}
+
+        {semVinculoAprovado ? (
+          <section className="painel-inferior" role="status">
+            <div>
+              <h2>Você está conectado</h2>
+              <p>
+                Seu acesso institucional ainda não está liberado. Se você enviou
+                uma solicitação de instituição, aguarde a análise; caso
+                contrário, procure o administrador da sua instituição para
+                solicitar um vínculo aprovado.
+              </p>
+            </div>
+          </section>
+        ) : (
+          <>
         <section className="indicadores">
 
           <article
@@ -394,11 +423,7 @@ function sair() {
     <div>
         <h3>Meus resultados</h3>
 
-        {erroProjetosAluno && (
-            <p role="alert">{erroProjetosAluno}</p>
-        )}
-
-        {!erroProjetosAluno && meusProjetos.length === 0 && (
+        {!erroCarregamento && meusProjetos.length === 0 && (
             <p>
                 Nenhum projeto associado a uma banca foi encontrado.
             </p>
@@ -441,6 +466,8 @@ function sair() {
 
   <span className="etiqueta">EM DESENVOLVIMENTO</span>
 </section>
+          </>
+        )}
 
       </main>
     </div>

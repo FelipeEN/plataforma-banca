@@ -11,7 +11,6 @@ function Login() {
 const [email, setEmail] = useState('')
 const [senha, setSenha] = useState('')
 const [mensagem, setMensagem] = useState('')
-const [confirmacaoNecessaria, setConfirmacaoNecessaria] = useState(false)
 const [carregando, setCarregando] = useState(false)
 
 const navigate = useNavigate()
@@ -20,7 +19,6 @@ async function fazerLogin(event) {
   event.preventDefault()
 
   setMensagem('')
-  setConfirmacaoNecessaria(false)
   setCarregando(true)
 
   try {
@@ -36,7 +34,6 @@ async function fazerLogin(event) {
 
     if (!resposta.ok) {
       setMensagem(dados.erro || 'Não foi possível realizar o login.')
-      setConfirmacaoNecessaria(resposta.status === 403)
       return
     }
 
@@ -116,15 +113,6 @@ async function fazerLogin(event) {
 
             {mensagem && <p className="login-aviso">{mensagem}</p>}
 
-            {confirmacaoNecessaria && (
-              <button
-                type="button"
-                onClick={() => navigate('/confirmar-email')}
-              >
-                Reenviar confirmação de e-mail
-              </button>
-            )}
-
             <p className="login-cadastro-instituicao">
               Ainda não tem uma conta?
               {' '}
@@ -137,7 +125,7 @@ async function fazerLogin(event) {
             </p>
 
             <p className="login-aviso">
-              Acesso destinado aos usuários cadastrados na plataforma.
+              O acesso às funcionalidades institucionais depende de um vínculo aprovado.
             </p>
 
           <p className="login-cadastro-instituicao">

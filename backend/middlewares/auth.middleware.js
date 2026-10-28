@@ -41,6 +41,9 @@ async function autenticarToken(req, res, next) {
                 v.perfil,
                 v.status
              FROM vinculos_institucionais v
+             INNER JOIN instituicoes i
+               ON i.id = v.instituicao_id
+              AND i.ativa = TRUE
              WHERE v.usuario_id = $1
                AND v.status = 'aprovado'
              ORDER BY v.instituicao_id`,
@@ -48,12 +51,6 @@ async function autenticarToken(req, res, next) {
         );
 
         const vinculos = resultado.rows;
-
-        if (vinculos.length === 0) {
-            return res.status(403).json({
-                erro: 'Você não possui vínculo aprovado com uma instituição.'
-            });
-        }
 
         // Se a rota informar uma instituição, usa o vínculo
         // correspondente a ela.
@@ -74,15 +71,17 @@ async function autenticarToken(req, res, next) {
             }
         } else {
             // Rotas sem instituição na URL usam o primeiro vínculo
-            // aprovado como padrão.
+            // aprovado como padrão, quando houver algum.
             vinculoAtivo = vinculos[0];
         }
 
         req.usuario = {
             id: usuarioId,
             email: dadosUsuario.email,
-            instituicaoId: Number(vinculoAtivo.instituicao_id),
-            perfil: vinculoAtivo.perfil,
+            instituicaoId: vinculoAtivo
+                ? Number(vinculoAtivo.instituicao_id)
+                : null,
+            perfil: vinculoAtivo ? vinculoAtivo.perfil : null,
             vinculos
         };
 

@@ -4,16 +4,18 @@ const pool = require('../database/connection');
 let chamadasDesdeLimpeza = 0;
 
 async function permitirRequisicao(acao, identidade, limite, janelaSegundos) {
-    const segredo = process.env.RATE_LIMIT_HMAC_SECRET;
+    const segredo =
+        process.env.RATE_LIMIT_HMAC_SECRET || process.env.JWT_SECRET;
 
-    if (!segredo) {
-        throw new Error('RATE_LIMIT_HMAC_SECRET is not configured.');
-    }
-
-    const hashChave = crypto
-        .createHmac('sha256', segredo)
-        .update(`${acao}:${identidade}`)
-        .digest('hex');
+    const hashChave = segredo
+        ? crypto
+            .createHmac('sha256', segredo)
+            .update(`${acao}:${identidade}`)
+            .digest('hex')
+        : crypto
+            .createHash('sha256')
+            .update(`${acao}:${identidade}`)
+            .digest('hex');
 
     const resultado = await pool.query(
         `INSERT INTO rate_limit_buckets (acao, chave_hash, janela_inicio, quantidade)
