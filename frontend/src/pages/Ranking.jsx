@@ -287,6 +287,15 @@ function Ranking() {
         }
     }
 
+    const colocacoesPodio = [3, 2, 1]
+        .map((posicao) => ({
+            posicao,
+            projetos: ranking.filter(
+                (projeto) => Number(projeto.posicao) === posicao
+            )
+        }))
+        .filter((colocacao) => colocacao.projetos.length > 0)
+
     return (
         <main className="pagina-projetos pagina-ranking">
             <button
@@ -364,6 +373,55 @@ function Ranking() {
                                         {totalProjetosRanqueados}
                                     </strong>
                                 </p>
+
+                                {colocacoesPodio.length > 0 && (
+                                    <section
+                                        className="podio-ranking"
+                                        aria-label="Pódio dos projetos classificados"
+                                    >
+                                        <h3>Projetos em destaque</h3>
+                                        <div className="podio-ranking-lugares">
+                                            {colocacoesPodio.map((colocacao) => (
+                                                <article
+                                                    className={`podio-ranking-lugar podio-ranking-lugar-${colocacao.posicao}`}
+                                                    key={colocacao.posicao}
+                                                >
+                                                    <span className="podio-ranking-medalha" aria-hidden="true">
+                                                        {colocacao.posicao === 1 ? '🥇' : colocacao.posicao === 2 ? '🥈' : '🥉'}
+                                                    </span>
+                                                    <h4>
+                                                        {colocacao.posicao}º lugar
+                                                        {colocacao.posicao === 1 && ' — Ouro'}
+                                                        {colocacao.posicao === 2 && ' — Prata'}
+                                                        {colocacao.posicao === 3 && ' — Bronze'}
+                                                    </h4>
+                                                    {colocacao.projetos.length > 1 && (
+                                                        <p className="podio-ranking-empate">
+                                                            Empate nesta posição
+                                                        </p>
+                                                    )}
+                                                    <ul>
+                                                        {colocacao.projetos.map((projeto) => (
+                                                            <li key={projeto.projeto_id}>
+                                                                <strong>{projeto.titulo}</strong>
+                                                                <span>
+                                                                    Média:{' '}
+                                                                    {Number(projeto.media_final).toLocaleString(
+                                                                        'pt-BR',
+                                                                        {
+                                                                            minimumFractionDigits: 2,
+                                                                            maximumFractionDigits: 2
+                                                                        }
+                                                                    )}
+                                                                </span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
 
                                 <div className="tabela-responsiva">
                                     <table>
