@@ -1788,6 +1788,12 @@
     font-weight: 600;
 }
 
+.podio-ranking .podio-ranking-audio-erro {
+    margin: 0 0 18px;
+    color: #ffd1d1;
+    text-align: center;
+}
+
 .podio-ranking-lugares {
     display: flex;
     align-items: end;

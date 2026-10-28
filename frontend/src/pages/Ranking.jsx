@@ -16,11 +16,16 @@ function Ranking() {
     const [erro, setErro] = useState('')
     const [erroInstituicao, setErroInstituicao] = useState('')
     const [erroExportacao, setErroExportacao] = useState('')
+    const [erroAudio, setErroAudio] = useState('')
     const [estadoPremiacao, setEstadoPremiacao] = useState('pronta')
-    const [movimentoReduzido, setMovimentoReduzido] = useState(
-        () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const movimentoReduzido = useRef(
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
     )
     const temporizadoresPremiacao = useRef([])
+    const audioPremiacao = useRef(null)
+    const manipuladorErroAudio = useRef(null)
+    const premiacaoAtiva = useRef(false)
+    const tentativaAudio = useRef(0)
 
     function limparTemporizadoresPremiacao() {
         temporizadoresPremiacao.current.forEach((temporizador) => {
@@ -29,27 +34,111 @@ function Ranking() {
         temporizadoresPremiacao.current = []
     }
 
-    function iniciarPremiacao() {
-        limparTemporizadoresPremiacao()
+    function pararAudioPremiacao() {
+        if (audioPremiacao.current) {
+            audioPremiacao.current.pause()
+            audioPremiacao.current.currentTime = 0
+        }
+    }
 
-        if (movimentoReduzido) {
-            setEstadoPremiacao('concluida')
+    function iniciarPremiacao() {
+        if (premiacaoAtiva.current) {
             return
         }
 
-        setEstadoPremiacao('bronze')
-        temporizadoresPremiacao.current = [
-            window.setTimeout(() => setEstadoPremiacao('prata'), 1800),
-            window.setTimeout(() => setEstadoPremiacao('ouro'), 3900),
-            window.setTimeout(() => {
-                temporizadoresPremiacao.current = []
+        limparTemporizadoresPremiacao()
+        pararAudioPremiacao()
+        setErroAudio('')
+        premiacaoAtiva.current = true
+        const tentativaAtual = ++tentativaAudio.current
+        setEstadoPremiacao('aguardando-bronze')
+
+        let sequenciaAgendada = false
+
+        function agendarSequencia() {
+            if (
+                tentativaAudio.current !== tentativaAtual ||
+                !premiacaoAtiva.current ||
+                sequenciaAgendada
+            ) {
+                return
+            }
+
+            sequenciaAgendada = true
+
+            if (movimentoReduzido.current) {
+                premiacaoAtiva.current = false
                 setEstadoPremiacao('concluida')
-            }, 5600)
-        ]
+                return
+            }
+
+            const agendarEtapa = (atraso, callback) =>
+                window.setTimeout(() => {
+                    if (premiacaoAtiva.current) {
+                        callback()
+                    }
+                }, atraso)
+
+            temporizadoresPremiacao.current = [
+                agendarEtapa(2000, () => setEstadoPremiacao('bronze')),
+                agendarEtapa(7000, () => setEstadoPremiacao('prata')),
+                agendarEtapa(13000, () => setEstadoPremiacao('ouro')),
+                agendarEtapa(18000, () => {
+                    premiacaoAtiva.current = false
+                    temporizadoresPremiacao.current = []
+                    setEstadoPremiacao('concluida')
+                })
+            ]
+        }
+
+        try {
+            if (!audioPremiacao.current) {
+                const audio = new Audio(
+                    '/audio/estudanet-premiacao-epica-original.wav'
+                )
+                audio.preload = 'none'
+                manipuladorErroAudio.current = () => {
+                    if (premiacaoAtiva.current) {
+                        setErroAudio(
+                            'A música não pôde ser carregada. A premiação continuará sem áudio.'
+                        )
+                    }
+                }
+                audio.addEventListener('error', manipuladorErroAudio.current)
+                audioPremiacao.current = audio
+            }
+
+            const reproducao = audioPremiacao.current.play()
+            if (movimentoReduzido.current) {
+                agendarSequencia()
+            }
+            reproducao.then(agendarSequencia, () => {
+                if (tentativaAudio.current === tentativaAtual) {
+                    setErroAudio(
+                        'A música não pôde ser reproduzida. A premiação continuará sem áudio.'
+                    )
+                    if (premiacaoAtiva.current) {
+                        agendarSequencia()
+                    }
+                }
+            })
+        } catch {
+            if (tentativaAudio.current === tentativaAtual) {
+                setErroAudio(
+                    'A música não pôde ser reproduzida. A premiação continuará sem áudio.'
+                )
+                if (premiacaoAtiva.current) {
+                    agendarSequencia()
+                }
+            }
+        }
     }
 
     function interromperPremiacao() {
+        premiacaoAtiva.current = false
+        tentativaAudio.current += 1
         limparTemporizadoresPremiacao()
+        pararAudioPremiacao()
         setEstadoPremiacao('interrompida')
     }
 
@@ -59,13 +148,13 @@ function Ranking() {
         )
 
         function atualizarPreferencia(evento) {
-            setMovimentoReduzido(evento.matches)
+            movimentoReduzido.current = evento.matches
 
-            if (evento.matches && temporizadoresPremiacao.current.length > 0) {
-                temporizadoresPremiacao.current.forEach((temporizador) => {
-                    window.clearTimeout(temporizador)
-                })
-                temporizadoresPremiacao.current = []
+            if (evento.matches && premiacaoAtiva.current) {
+                premiacaoAtiva.current = false
+                tentativaAudio.current += 1
+                limparTemporizadoresPremiacao()
+                pararAudioPremiacao()
                 setEstadoPremiacao('concluida')
             }
         }
@@ -77,10 +166,17 @@ function Ranking() {
                 'change',
                 atualizarPreferencia
             )
-            temporizadoresPremiacao.current.forEach((temporizador) => {
-                window.clearTimeout(temporizador)
-            })
-            temporizadoresPremiacao.current = []
+            premiacaoAtiva.current = false
+            tentativaAudio.current += 1
+            limparTemporizadoresPremiacao()
+            pararAudioPremiacao()
+
+            if (audioPremiacao.current && manipuladorErroAudio.current) {
+                audioPremiacao.current.removeEventListener(
+                    'error',
+                    manipuladorErroAudio.current
+                )
+            }
         }
     }, [])
 
@@ -383,6 +479,7 @@ function Ranking() {
     }
 
     const premiacaoEmAndamento = [
+        'aguardando-bronze',
         'bronze',
         'prata',
         'ouro'
@@ -514,8 +611,17 @@ function Ranking() {
                                             {estadoPremiacao === 'ouro' && '1º lugar — Ouro'}
                                             {estadoPremiacao === 'concluida' && 'Premiação concluída'}
                                             {estadoPremiacao === 'interrompida' && 'Premiação interrompida'}
+                                            {estadoPremiacao === 'aguardando-bronze' && 'A cerimônia vai começar...'}
                                             {estadoPremiacao === 'pronta' && 'Inicie a cerimônia para revelar o pódio.'}
                                         </p>
+                                        {erroAudio && (
+                                            <p
+                                                className="podio-ranking-audio-erro"
+                                                role="status"
+                                            >
+                                                {erroAudio}
+                                            </p>
+                                        )}
                                         <div className="podio-ranking-lugares">
                                             {colocacoesPodio.map((colocacao) => (
                                                 <article
