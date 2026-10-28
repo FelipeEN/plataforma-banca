@@ -368,7 +368,9 @@ async function cadastrarBanca(evento) {
                                     )}
                                 {['admin', 'coordenador'].includes(perfilUsuario) &&
                                     banca.status === 'rascunho' && (
+
                                         <button
+                                            className="botao-abrir-banca"
                                             type="button"
                                             onClick={() => abrirBanca(banca.id)}
                                         >
@@ -381,6 +383,7 @@ async function cadastrarBanca(evento) {
                                 {['admin', 'coordenador'].includes(perfilUsuario) &&
                                     banca.status === 'aberta' && (
                                         <button
+                                            className="botao-encerrar-banca"
                                             type="button"
                                             onClick={() => encerrarBanca(banca.id)}
                                             disabled={encerrandoBancaId === banca.id}

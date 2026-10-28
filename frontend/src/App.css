@@ -1171,6 +1171,38 @@
     outline-offset: 3px;
 }
 
+.botao-abrir-banca {
+    margin-top: 12px;
+    border-color: #21804a;
+    background: #21804a;
+    color: #fff;
+}
+
+.botao-abrir-banca:hover:not(:disabled) {
+    border-color: #176c3d;
+    background: #176c3d;
+}
+
+.botao-abrir-banca:focus-visible {
+    outline-color: rgba(33, 128, 74, 0.4);
+}
+
+.botao-encerrar-banca {
+    margin-top: 12px;
+    border-color: #a4262c;
+    background: #a4262c;
+    color: #fff;
+}
+
+.botao-encerrar-banca:hover:not(:disabled) {
+    border-color: #801d23;
+    background: #801d23;
+}
+
+.botao-encerrar-banca:focus-visible {
+    outline-color: rgba(164, 38, 44, 0.4);
+}
+
 /* Botão para visualizar os detalhes de um projeto */
 .botao-detalhes-projeto {
     display: inline-flex;
@@ -2262,4 +2294,11 @@
 .botao-publicar-banca:focus-visible {
     outline: 3px solid #b9a9ff;
     outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+    .botao-abrir-banca,
+    .botao-encerrar-banca {
+        width: 100%;
+    }
 }

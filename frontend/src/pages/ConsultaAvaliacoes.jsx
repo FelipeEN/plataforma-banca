@@ -56,7 +56,7 @@ function ConsultaAvaliacoes() {
         return (
             <main>
                 <p role="alert">{erro}</p>
-                <button onClick={() => navigate(-1)}>
+                <button className="botao-voltar" onClick={() => navigate(-1)}>
                     Voltar
                 </button>
             </main>

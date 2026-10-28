@@ -171,7 +171,7 @@ function Projetos() {
       <main className="pagina-projetos">
         <h1>Projetos</h1>
         <p role="alert">{erro}</p>
-        <button onClick={() => navigate('/dashboard')}>
+        <button className="botao-voltar" onClick={() => navigate('/dashboard')}>
           Voltar ao dashboard
         </button>
       </main>
